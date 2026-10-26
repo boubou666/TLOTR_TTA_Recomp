@@ -4,8 +4,10 @@
 #include "ps2_runtime.h"
 #include "ps2_recompiled_functions.h"
 
+#include <cstdio>
 #include <cstdlib>
 #include <iostream>
+#include <string>
 
 namespace
 {
@@ -73,22 +75,6 @@ namespace
         dumpWords(rdram, "top chunk", top, 0x20u);
     }
 
-    // TTA_MEMTOP=0x...: the memory top EA's heap sizing reads (0x1BD698 fills [0x20] = top - end of BSS and
-    // [0x24] = top, from 0x377DD0 = 0x2000000). The runtime keeps RAM above EndOfHeap (0x1F00000) for itself, so
-    // the game's first malloc of the whole span fails and the heap ends up 1 MB short. A/B switch for that.
-    constexpr uint32_t kMemoryInfo = 0x001BD698u;
-    constexpr uint32_t kEndOfBss = 0x00448E10u;
-    uint32_t g_memoryTop = 0u;
-
-    void memoryInfoOverride(uint8_t *rdram, R5900Context *ctx, PS2Runtime *runtime)
-    {
-        const uint32_t info = getRegU32(ctx, 4);
-        FUN_001bd698_0x1bd698(rdram, ctx, runtime);
-        auto *words = reinterpret_cast<uint32_t *>(rdram + (info & 0x1FFFFFCu));
-        words[0x20 / 4] = g_memoryTop - kEndOfBss;
-        words[0x24 / 4] = g_memoryTop;
-    }
-
     void eaHeapAllocTrace(uint8_t *rdram, R5900Context *ctx, PS2Runtime *runtime)
     {
         static uint32_t s_calls = 0, s_failures = 0;
@@ -99,6 +85,42 @@ namespace
         if (n < 8u || (result == 0u && s_failures++ < 16u))
             std::cerr << std::hex << "[tta:heap] alloc #" << std::dec << n << std::hex << " heap=0x" << heap
                       << " size=0x" << size << " align=0x" << align << " ra=0x" << ra << " -> 0x" << result
+                      << std::dec << std::endl;
+    }
+
+    // dlmalloc's malloc (0x24F780) and the helpers it calls on its slow paths: for the first calls, log the arguments,
+    // the result and which helpers ran in between, to see where a failing request leaves.
+    constexpr uint32_t kDlMalloc = 0x0024F780u;
+    uint32_t g_dlMallocDepth = 0u, g_dlMallocCalls = 0u;
+    std::string g_dlMallocPath;
+
+    template <uint32_t Address, void (*Function)(uint8_t *, R5900Context *, PS2Runtime *)>
+    void dlHelperTrace(uint8_t *rdram, R5900Context *ctx, PS2Runtime *runtime)
+    {
+        const uint32_t a0 = getRegU32(ctx, 4), a1 = getRegU32(ctx, 5);
+        Function(rdram, ctx, runtime);
+        if (g_dlMallocDepth != 0u && g_dlMallocCalls <= 4u)
+        {
+            char step[96];
+            std::snprintf(step, sizeof(step), " %x(%x,%x)->%x", Address, a0, a1, getRegU32(ctx, 2));
+            g_dlMallocPath += step;
+        }
+    }
+
+    void dlMallocTrace(uint8_t *rdram, R5900Context *ctx, PS2Runtime *runtime)
+    {
+        const uint32_t arena = getRegU32(ctx, 4), size = getRegU32(ctx, 5), flags = getRegU32(ctx, 6);
+        const uint32_t ra = getRegU32(ctx, 31), n = ++g_dlMallocCalls;
+        if (g_dlMallocDepth++ == 0u)
+            g_dlMallocPath.clear();
+        FUN_0024f780_0x24f780(rdram, ctx, runtime);
+        --g_dlMallocDepth;
+        if (n <= 4u)
+            std::cerr << std::hex << "[tta:heap] dlmalloc #" << std::dec << n << std::hex << " arena=0x" << arena
+                      << " size=0x" << size << " flags=0x" << flags << " ra=0x" << ra << " -> 0x" << getRegU32(ctx, 2)
+                      << " max_fast=0x" << rd32(rdram, arena + 4u) << " split=0x" << rd32(rdram, arena + 0x468u)
+                      << " byte46c=0x" << (rd32(rdram, arena + 0x46Cu) & 0xFFFFu) << " runtimeHeapEnd=0x"
+                      << runtime->guestHeapEnd() << " path:" << g_dlMallocPath
                       << std::dec << std::endl;
     }
 
@@ -123,8 +145,36 @@ namespace
                       << getRegU32(ctx, 2) << " limit=0x" << runtime->guestHeapLimit() << std::dec << std::endl;
     }
 
+    // TTA_TRACE_CALLS=1 (bring-up aid): the first calls of a few functions with their caller, stack and arguments.
+    // 0x125FA8 (reached through 0x125C90's vtable slot) calls a method of the object at 0x3A1728, which 0x1552C0
+    // only sets later in the boot; 0x212638 is the game's sceGsSyncVCallback handler.
+    constexpr uint32_t kTracedObject = 0x003A1728u;
+    constexpr uint32_t kVSyncHook = 0x003F6E54u; // called by 0x212638 when set
+
+    template <uint32_t Address, void (*Function)(uint8_t *, R5900Context *, PS2Runtime *)>
+    void callTrace(uint8_t *rdram, R5900Context *ctx, PS2Runtime *runtime)
+    {
+        static uint32_t s_calls = 0, s_hook = 0;
+        const uint32_t hook = rd32(rdram, kVSyncHook);
+        const bool hookChanged = hook != s_hook;
+        s_hook = hook;
+        if (s_calls++ < 4u || hookChanged)
+            std::fprintf(stderr, "[tta:call] 0x%x #%u ra=0x%x sp=0x%x a0=0x%x a1=0x%x [0x3a1728]=0x%x [0x3f6e54]=0x%x\n", Address,
+                         s_calls, getRegU32(ctx, 31), getRegU32(ctx, 29), getRegU32(ctx, 4), getRegU32(ctx, 5),
+                         rd32(rdram, kTracedObject), rd32(rdram, kVSyncHook));
+        Function(rdram, ctx, runtime);
+    }
+
+    // TTA's newlib sbrk (0x328C30) owns guest RAM from the end of its BSS (0x448E10) up to EndOfHeap, and EA carves
+    // its whole dlmalloc heap out of it. The runtime's guest heap (HLE GIF packets of sceGsResetGraph and
+    // sceGsExecLoadImage/StoreImage, MPEG callback data, thread stacks) starts at the same base by default:
+    // sceGsResetGraph's packet wiped the heap's top chunk header and every allocation failed. The runtime's heap goes
+    // to the 1 MB under its reserved area instead, and the game's sbrk stops there.
+    constexpr uint32_t kRuntimeHeapBytes = 0x00100000u;
+
     void applyTta(PS2Runtime &runtime)
     {
+        runtime.pinGuestHeap(PS2Runtime::reservedMemoryBase() - kRuntimeHeapBytes, PS2Runtime::reservedMemoryBase());
         if (std::getenv("TTA_TRACE_ALLOC"))
         {
             runtime.registerFunction(kAllocCall, &allocCallTrace);
@@ -132,11 +182,19 @@ namespace
             runtime.registerFunction(kEaHeapAlloc, &eaHeapAllocTrace);
             runtime.registerFunction(kMalloc, &mallocTrace);
             runtime.registerFunction(kSbrk, &sbrkTrace);
+            runtime.registerFunction(kDlMalloc, &dlMallocTrace);
+            runtime.registerFunction(0x0024EAA0u, &dlHelperTrace<0x24EAA0u, FUN_0024eaa0_0x24eaa0>);
+            runtime.registerFunction(0x002506C0u, &dlHelperTrace<0x2506C0u, FUN_002506c0_0x2506c0>);
+            runtime.registerFunction(0x0024ECE8u, &dlHelperTrace<0x24ECE8u, FUN_0024ece8_0x24ece8>);
+            runtime.registerFunction(0x00250A78u, &dlHelperTrace<0x250A78u, FUN_00250a78_0x250a78>);
+            runtime.registerFunction(0x0024FF28u, &dlHelperTrace<0x24FF28u, FUN_0024ff28_0x24ff28>);
         }
-        if (const char *top = std::getenv("TTA_MEMTOP"); top && *top)
+        if (std::getenv("TTA_TRACE_CALLS"))
         {
-            g_memoryTop = static_cast<uint32_t>(std::strtoul(top, nullptr, 0));
-            runtime.registerFunction(kMemoryInfo, &memoryInfoOverride);
+            runtime.registerFunction(0x00125C90u, &callTrace<0x125C90u, FUN_00125c90_0x125c90>);
+            runtime.registerFunction(0x00125FA8u, &callTrace<0x125FA8u, FUN_00125fa8_0x125fa8>);
+            runtime.registerFunction(0x001552C0u, &callTrace<0x1552C0u, FUN_001552c0_0x1552c0>);
+            runtime.registerFunction(0x00212638u, &callTrace<0x212638u, FUN_00212638_0x212638>);
         }
         std::cout << "[tta] The Third Age (NTSC-U SLUS-21027) overrides applied" << std::endl;
     }

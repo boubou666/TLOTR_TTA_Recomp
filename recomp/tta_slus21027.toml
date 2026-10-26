@@ -134,44 +134,72 @@ stubs = [
 # PS2Recomp keeps their guest implementation and exposes exact callable entries.
 entry_points = [
   # --- Manual: code reached only through data pointers (vtables, callback tables), which Ghidra left as
-  # labels or skipped. tools/find_code_pointers.py lists them; the boot stopped at 0x001C45A0 (JALR from 0x00198690).
+  # labels or skipped. tools/find_code_pointers.py lists them; boots stopped at 0x001C45A0 (JALR from 0x00198690),
+  # at 0x0012B8D0 (JALR from 0x00119DEC, a leaf after alignment nops) and at 0x001C62C0 (JALR from 0x001C75CC,
+  # code Ghidra never disassembled). Run it with recomp/ghidra/tta_functions.csv as third argument.
+  "ptr_0011C658@0x0011C658", # 1 ref(s), first at 0x00359AA0
+  "ptr_0011C678@0x0011C678", # 1 ref(s), first at 0x00359ACC
+  "ptr_00125F80@0x00125F80", # 1 ref(s), first at 0x00359C98
+  "ptr_00128A80@0x00128A80", # 2 ref(s), first at 0x0035983C
   "ptr_00129558@0x00129558", # 1 ref(s), first at 0x00359A10
   "ptr_00129560@0x00129560", # 1 ref(s), first at 0x003599F8
   "ptr_00129568@0x00129568", # 1 ref(s), first at 0x00359A24
+  "ptr_0012A430@0x0012A430", # 1 ref(s), first at 0x00359974
+  "ptr_0012B8D0@0x0012B8D0", # 1 ref(s), first at 0x00359A30
   "ptr_0012B900@0x0012B900", # 1 ref(s), first at 0x003596C8
   "ptr_0012B908@0x0012B908", # 1 ref(s), first at 0x003596B4
   "ptr_0012C090@0x0012C090", # 1 ref(s), first at 0x00359B14
   "ptr_0012C340@0x0012C340", # 1 ref(s), first at 0x00359C70
   "ptr_0012D058@0x0012D058", # 1 ref(s), first at 0x00359688
   "ptr_0012D060@0x0012D060", # 1 ref(s), first at 0x00359678
+  "ptr_00130780@0x00130780", # 1 ref(s), first at 0x0035B2E4
+  "ptr_00140790@0x00140790", # 1 ref(s), first at 0x0035D9BC
   "ptr_00140798@0x00140798", # 1 ref(s), first at 0x0035D9C0
   "ptr_001407A0@0x001407A0", # 1 ref(s), first at 0x0035D9A0
   "ptr_001407A8@0x001407A8", # 1 ref(s), first at 0x0035D9A4
   "ptr_001407B0@0x001407B0", # 1 ref(s), first at 0x0035DE54
+  "ptr_001430C0@0x001430C0", # 1 ref(s), first at 0x00387BE0
+  "ptr_001430D4@0x001430D4", # 1 ref(s), first at 0x00387C08
+  "ptr_001430E8@0x001430E8", # 1 ref(s), first at 0x00387C10
+  "ptr_001430FC@0x001430FC", # 1 ref(s), first at 0x00387C14
+  "ptr_00143110@0x00143110", # 1 ref(s), first at 0x00387C18
+  "ptr_00143124@0x00143124", # 1 ref(s), first at 0x00387C1C
+  "ptr_00143138@0x00143138", # 10 ref(s), first at 0x00387BE4
   "ptr_00158588@0x00158588", # 1 ref(s), first at 0x0035D784
+  "ptr_0015B470@0x0015B470", # 1 ref(s), first at 0x0035DC28
   "ptr_0015C448@0x0015C448", # 1 ref(s), first at 0x0038228C
+  "ptr_0015C460@0x0015C460", # 1 ref(s), first at 0x00382294
   "ptr_0015E080@0x0015E080", # 1 ref(s), first at 0x003821F4
   "ptr_0015E088@0x0015E088", # 1 ref(s), first at 0x003821FC
+  "ptr_0015E0A0@0x0015E0A0", # 1 ref(s), first at 0x00382204
   "ptr_0015E0A8@0x0015E0A8", # 1 ref(s), first at 0x0038220C
   "ptr_0015E0B0@0x0015E0B0", # 1 ref(s), first at 0x00382214
   "ptr_0015E0B8@0x0015E0B8", # 1 ref(s), first at 0x0038221C
   "ptr_0015E4F0@0x0015E4F0", # 1 ref(s), first at 0x00382244
   "ptr_0015F580@0x0015F580", # 1 ref(s), first at 0x003807B4
   "ptr_0015FC58@0x0015FC58", # 1 ref(s), first at 0x0038069C
+  "ptr_0015FD38@0x0015FD38", # 1 ref(s), first at 0x00380704
   "ptr_0015FDB8@0x0015FDB8", # 1 ref(s), first at 0x0038058C
   "ptr_001607D0@0x001607D0", # 1 ref(s), first at 0x0038022C
+  "ptr_00160F10@0x00160F10", # 8 ref(s), first at 0x0037F52C
+  "ptr_00160F50@0x00160F50", # 1 ref(s), first at 0x00380214
   "ptr_00160F58@0x00160F58", # 8 ref(s), first at 0x0037F514
   "ptr_00161A28@0x00161A28", # 1 ref(s), first at 0x00380104
   "ptr_00161A30@0x00161A30", # 1 ref(s), first at 0x003801D4
+  "ptr_00161B80@0x00161B80", # 1 ref(s), first at 0x003801EC
   "ptr_001626C8@0x001626C8", # 1 ref(s), first at 0x0037FFEC
   "ptr_00162AF8@0x00162AF8", # 1 ref(s), first at 0x0037FF64
   "ptr_00162CA0@0x00162CA0", # 1 ref(s), first at 0x0037FC74
+  "ptr_001633A0@0x001633A0", # 4 ref(s), first at 0x0037F7C4
   "ptr_001633A8@0x001633A8", # 4 ref(s), first at 0x0037F7CC
   "ptr_00163E60@0x00163E60", # 1 ref(s), first at 0x0037F64C
+  "ptr_00164148@0x00164148", # 1 ref(s), first at 0x0037F3BC
   "ptr_00164170@0x00164170", # 1 ref(s), first at 0x0037F3FC
+  "ptr_0016D0D8@0x0016D0D8", # 1 ref(s), first at 0x0035DC54
   "ptr_001744D0@0x001744D0", # 1 ref(s), first at 0x00394A7C
   "ptr_00174500@0x00174500", # 1 ref(s), first at 0x00394AA4
   "ptr_00174530@0x00174530", # 1 ref(s), first at 0x003949DC
+  "ptr_00174560@0x00174560", # 1 ref(s), first at 0x00394A04
   "ptr_001745A0@0x001745A0", # 1 ref(s), first at 0x00394A2C
   "ptr_001745E0@0x001745E0", # 1 ref(s), first at 0x00394A54
   "ptr_00174610@0x00174610", # 1 ref(s), first at 0x00394ACC
@@ -179,27 +207,79 @@ entry_points = [
   "ptr_00177970@0x00177970", # 1 ref(s), first at 0x0038250C
   "ptr_00178280@0x00178280", # 1 ref(s), first at 0x003824D4
   "ptr_00178CA8@0x00178CA8", # 1 ref(s), first at 0x0038249C
+  "ptr_0017AEE0@0x0017AEE0", # 1 ref(s), first at 0x0038230C
   "ptr_0017E2B8@0x0017E2B8", # 1 ref(s), first at 0x0035DD60
   "ptr_0017E318@0x0017E318", # 1 ref(s), first at 0x0035DD70
   "ptr_0017E340@0x0017E340", # 3 ref(s), first at 0x0035DF74
+  "ptr_0017E368@0x0017E368", # 1 ref(s), first at 0x0035DD6C
+  "ptr_0018E7D0@0x0018E7D0", # 1 ref(s), first at 0x00389200
+  "ptr_0018E7E0@0x0018E7E0", # 1 ref(s), first at 0x00389204
+  "ptr_0018E7F4@0x0018E7F4", # 1 ref(s), first at 0x00389208
+  "ptr_0018E814@0x0018E814", # 1 ref(s), first at 0x0038920C
+  "ptr_0018E82C@0x0018E82C", # 1 ref(s), first at 0x00389210
+  "ptr_0018E8C8@0x0018E8C8", # 1 ref(s), first at 0x00389220
+  "ptr_0018E8D8@0x0018E8D8", # 1 ref(s), first at 0x00389224
+  "ptr_0018E8EC@0x0018E8EC", # 1 ref(s), first at 0x00389228
+  "ptr_0018E90C@0x0018E90C", # 1 ref(s), first at 0x0038922C
+  "ptr_0018E924@0x0018E924", # 1 ref(s), first at 0x00389230
+  "ptr_0018EB98@0x0018EB98", # 1 ref(s), first at 0x00389280
+  "ptr_0018EBA8@0x0018EBA8", # 1 ref(s), first at 0x00389284
+  "ptr_0018EBBC@0x0018EBBC", # 1 ref(s), first at 0x00389288
+  "ptr_0018EBDC@0x0018EBDC", # 1 ref(s), first at 0x0038928C
+  "ptr_0018EBF4@0x0018EBF4", # 1 ref(s), first at 0x00389290
+  "ptr_0018ED78@0x0018ED78", # 1 ref(s), first at 0x003892C0
+  "ptr_0018ED88@0x0018ED88", # 1 ref(s), first at 0x003892C4
+  "ptr_0018ED9C@0x0018ED9C", # 1 ref(s), first at 0x003892C8
+  "ptr_0018EDBC@0x0018EDBC", # 1 ref(s), first at 0x003892CC
+  "ptr_0018EDD4@0x0018EDD4", # 1 ref(s), first at 0x003892D0
+  "ptr_0018EE68@0x0018EE68", # 1 ref(s), first at 0x003892E0
+  "ptr_0018EE78@0x0018EE78", # 1 ref(s), first at 0x003892E4
+  "ptr_0018EE8C@0x0018EE8C", # 1 ref(s), first at 0x003892E8
+  "ptr_0018EEAC@0x0018EEAC", # 1 ref(s), first at 0x003892EC
+  "ptr_0018EEC4@0x0018EEC4", # 1 ref(s), first at 0x003892F0
+  "ptr_0018EF50@0x0018EF50", # 1 ref(s), first at 0x00389300
+  "ptr_0018EF60@0x0018EF60", # 1 ref(s), first at 0x00389304
+  "ptr_0018EF74@0x0018EF74", # 1 ref(s), first at 0x00389308
+  "ptr_0018EF94@0x0018EF94", # 1 ref(s), first at 0x0038930C
+  "ptr_0018EFAC@0x0018EFAC", # 1 ref(s), first at 0x00389310
+  "ptr_0018F038@0x0018F038", # 1 ref(s), first at 0x00389320
+  "ptr_0018F048@0x0018F048", # 1 ref(s), first at 0x00389324
+  "ptr_0018F05C@0x0018F05C", # 1 ref(s), first at 0x00389328
+  "ptr_0018F07C@0x0018F07C", # 1 ref(s), first at 0x0038932C
+  "ptr_0018F094@0x0018F094", # 1 ref(s), first at 0x00389330
+  "ptr_0018F120@0x0018F120", # 1 ref(s), first at 0x00389340
+  "ptr_0018F130@0x0018F130", # 1 ref(s), first at 0x00389344
+  "ptr_0018F144@0x0018F144", # 1 ref(s), first at 0x00389348
+  "ptr_0018F164@0x0018F164", # 1 ref(s), first at 0x0038934C
+  "ptr_0018F17C@0x0018F17C", # 1 ref(s), first at 0x00389350
   "ptr_00197BB8@0x00197BB8", # 1 ref(s), first at 0x0037F2BC
   "ptr_00197BC0@0x00197BC0", # 1 ref(s), first at 0x0037F2C4
   "ptr_00197BC8@0x00197BC8", # 2 ref(s), first at 0x0037F024
   "ptr_00198058@0x00198058", # 2 ref(s), first at 0x0037F04C
+  "ptr_001981E0@0x001981E0", # 2 ref(s), first at 0x0037F094
   "ptr_00198918@0x00198918", # 2 ref(s), first at 0x0037F14C
+  "ptr_0019A918@0x0019A918", # 2 ref(s), first at 0x0037F23C
   "ptr_0019AB00@0x0019AB00", # 2 ref(s), first at 0x0037F264
   "ptr_0019AB20@0x0019AB20", # 2 ref(s), first at 0x0037F26C
+  "ptr_0019BEA0@0x0019BEA0", # 1 ref(s), first at 0x0035BFD4
   "ptr_0019BF00@0x0019BF00", # 1 ref(s), first at 0x0035BFAC
   "ptr_0019BF70@0x0019BF70", # 1 ref(s), first at 0x0035BFBC
   "ptr_0019C2B8@0x0019C2B8", # 1 ref(s), first at 0x0035C05C
+  "ptr_0019C520@0x0019C520", # 1 ref(s), first at 0x0035C0AC
   "ptr_0019DF68@0x0019DF68", # 1 ref(s), first at 0x0035C3F4
+  "ptr_001A03B8@0x001A03B8", # 1 ref(s), first at 0x0035C854
   "ptr_001A4118@0x001A4118", # 1 ref(s), first at 0x003808D4
   "ptr_001A4338@0x001A4338", # 1 ref(s), first at 0x003809B4
   "ptr_001A4340@0x001A4340", # 1 ref(s), first at 0x003809BC
+  "ptr_001A4A20@0x001A4A20", # 1 ref(s), first at 0x0038275C
   "ptr_001A4A28@0x001A4A28", # 1 ref(s), first at 0x00382764
   "ptr_001A5600@0x001A5600", # 1 ref(s), first at 0x0035D888
   "ptr_001A5A90@0x001A5A90", # 1 ref(s), first at 0x0035D89C
   "ptr_001A5C38@0x001A5C38", # 1 ref(s), first at 0x0035D8A4
+  "ptr_001A6518@0x001A6518", # 1 ref(s), first at 0x0035DEE4
+  "ptr_001AA180@0x001AA180", # 1 ref(s), first at 0x00381C4C
+  "ptr_001AA2A8@0x001AA2A8", # 1 ref(s), first at 0x00381DEC
+  "ptr_001AA998@0x001AA998", # 1 ref(s), first at 0x00381CCC
   "ptr_001ABDB8@0x001ABDB8", # 1 ref(s), first at 0x0035D6E0
   "ptr_001ABDF0@0x001ABDF0", # 1 ref(s), first at 0x0035D6DC
   "ptr_001AC448@0x001AC448", # 1 ref(s), first at 0x0035DB7C
@@ -207,45 +287,84 @@ entry_points = [
   "ptr_001ACB20@0x001ACB20", # 1 ref(s), first at 0x0035DB80
   "ptr_001AE9B8@0x001AE9B8", # 1 ref(s), first at 0x0035DD24
   "ptr_001AFAF0@0x001AFAF0", # 1 ref(s), first at 0x0035D818
+  "ptr_001B2B20@0x001B2B20", # 1 ref(s), first at 0x0035DE48
+  "ptr_001B5520@0x001B5520", # 1 ref(s), first at 0x0035E064
   "ptr_001B5740@0x001B5740", # 1 ref(s), first at 0x0035D9D8
+  "ptr_001B5750@0x001B5750", # 1 ref(s), first at 0x0035D9DC
+  "ptr_001B6EA8@0x001B6EA8", # 1 ref(s), first at 0x0035D944
   "ptr_001B75A0@0x001B75A0", # 1 ref(s), first at 0x0035D7B0
   "ptr_001B75A8@0x001B75A8", # 1 ref(s), first at 0x0035D7BC
   "ptr_001BED98@0x001BED98", # 1 ref(s), first at 0x0035DEFC
   "ptr_001C42B8@0x001C42B8", # 1 ref(s), first at 0x00380D4C
   "ptr_001C42D8@0x001C42D8", # 1 ref(s), first at 0x00380D6C
   "ptr_001C45A0@0x001C45A0", # 1 ref(s), first at 0x0037EDF4
+  "ptr_001C4678@0x001C4678", # 1 ref(s), first at 0x0037EDC4
+  "ptr_001C46F8@0x001C46F8", # 1 ref(s), first at 0x0037EDE4
   "ptr_001C5DD8@0x001C5DD8", # 1 ref(s), first at 0x0037EE2C
   "ptr_001C5DE0@0x001C5DE0", # 1 ref(s), first at 0x0037EE34
+  "ptr_001C5EA8@0x001C5EA8", # 1 ref(s), first at 0x0037EECC
+  "ptr_001C5F70@0x001C5F70", # 1 ref(s), first at 0x0035D968
+  "ptr_001C5F80@0x001C5F80", # 1 ref(s), first at 0x0035D96C
   "ptr_001C60B0@0x001C60B0", # 1 ref(s), first at 0x0036B00C
+  "ptr_001C62C0@0x001C62C0", # 1 ref(s), first at 0x0036B030
+  "ptr_001C6310@0x001C6310", # 1 ref(s), first at 0x0036B034
+  "ptr_001C6370@0x001C6370", # 1 ref(s), first at 0x0036B038
+  "ptr_001C6B58@0x001C6B58", # 1 ref(s), first at 0x0036B058
   "ptr_001C6B80@0x001C6B80", # 1 ref(s), first at 0x0036B05C
+  "ptr_001C6BE0@0x001C6BE0", # 1 ref(s), first at 0x0036B060
+  "ptr_001C6E50@0x001C6E50", # 1 ref(s), first at 0x0036B080
   "ptr_001C6EA0@0x001C6EA0", # 1 ref(s), first at 0x0036B084
+  "ptr_001C6F00@0x001C6F00", # 1 ref(s), first at 0x0036B088
+  "ptr_001C71B8@0x001C71B8", # 1 ref(s), first at 0x0036B0A8
   "ptr_001C7200@0x001C7200", # 1 ref(s), first at 0x0036B0AC
   "ptr_001C8B38@0x001C8B38", # 1 ref(s), first at 0x0036B12C
+  "ptr_001C8B50@0x001C8B50", # 1 ref(s), first at 0x0036B134
   "ptr_001C8B58@0x001C8B58", # 1 ref(s), first at 0x0036B13C
   "ptr_001C9050@0x001C9050", # 1 ref(s), first at 0x0036B14C
   "ptr_001C90C0@0x001C90C0", # 1 ref(s), first at 0x0036B154
   "ptr_001C93F8@0x001C93F8", # 1 ref(s), first at 0x0036B16C
+  "ptr_001D4290@0x001D4290", # 1 ref(s), first at 0x0035F244
   "ptr_001D6C50@0x001D6C50", # 1 ref(s), first at 0x0035F2BC
   "ptr_001DB718@0x001DB718", # 1 ref(s), first at 0x0035DE6C
+  "ptr_001DBC50@0x001DBC50", # 1 ref(s), first at 0x0035DA98
   "ptr_001DBD28@0x001DBD28", # 1 ref(s), first at 0x0035DA84
   "ptr_001DC698@0x001DC698", # 1 ref(s), first at 0x0035F238
+  "ptr_001DD658@0x001DD658", # 1 ref(s), first at 0x0035DAB8
   "ptr_001DD6C8@0x001DD6C8", # 1 ref(s), first at 0x0035DABC
+  "ptr_001E01B0@0x001E01B0", # 1 ref(s), first at 0x00395134
+  "ptr_001E10D8@0x001E10D8", # 1 ref(s), first at 0x0035D7F4
   "ptr_001E63C0@0x001E63C0", # 1 ref(s), first at 0x00381F5C
   "ptr_001E65A0@0x001E65A0", # 1 ref(s), first at 0x00381EFC
   "ptr_001E65A8@0x001E65A8", # 1 ref(s), first at 0x00381F04
   "ptr_001E6D60@0x001E6D60", # 1 ref(s), first at 0x00381F4C
   "ptr_001E7E10@0x001E7E10", # 1 ref(s), first at 0x00381F64
+  "ptr_001EB0C8@0x001EB0C8", # 1 ref(s), first at 0x00381334
   "ptr_001EC7A8@0x001EC7A8", # 1 ref(s), first at 0x00381314
   "ptr_001ECD50@0x001ECD50", # 1 ref(s), first at 0x0035E03C
   "ptr_001ECD58@0x001ECD58", # 1 ref(s), first at 0x0035E044
+  "ptr_001EFD58@0x001EFD58", # 1 ref(s), first at 0x00381394
   "ptr_001F32B0@0x001F32B0", # 1 ref(s), first at 0x00381B64
+  "ptr_001FAE58@0x001FAE58", # 1 ref(s), first at 0x0038162C
+  "ptr_00200A48@0x00200A48", # 1 ref(s), first at 0x003819F4
+  "ptr_00202F30@0x00202F30", # 1 ref(s), first at 0x003811A4
+  "ptr_00204CA8@0x00204CA8", # 1 ref(s), first at 0x003810E4
   "ptr_00204CB0@0x00204CB0", # 1 ref(s), first at 0x003811CC
   "ptr_002050F0@0x002050F0", # 1 ref(s), first at 0x0038115C
+  "ptr_00209158@0x00209158", # 1 ref(s), first at 0x0038E530
+  "ptr_0020916C@0x0020916C", # 1 ref(s), first at 0x0038E534
+  "ptr_0020917C@0x0020917C", # 1 ref(s), first at 0x0038E538
+  "ptr_0020918C@0x0020918C", # 1 ref(s), first at 0x0038E53C
+  "ptr_002091A0@0x002091A0", # 1 ref(s), first at 0x0038E540
+  "ptr_002091B4@0x002091B4", # 1 ref(s), first at 0x0038E544
+  "ptr_0020D2E0@0x0020D2E0", # 1 ref(s), first at 0x0035F204
+  "ptr_0020D320@0x0020D320", # 1 ref(s), first at 0x0035F208
   "ptr_0021E6B0@0x0021E6B0", # 1 ref(s), first at 0x0035F9B4
   "ptr_0021E840@0x0021E840", # 1 ref(s), first at 0x0035F8D8
+  "ptr_0021EA08@0x0021EA08", # 2 ref(s), first at 0x0035F8F4
   "ptr_0021EA10@0x0021EA10", # 2 ref(s), first at 0x0035F8F8
   "ptr_0021EA18@0x0021EA18", # 2 ref(s), first at 0x0035F900
   "ptr_0021EA20@0x0021EA20", # 2 ref(s), first at 0x0035F904
+  "ptr_0021F088@0x0021F088", # 2 ref(s), first at 0x0035F92C
   "ptr_0021FDF8@0x0021FDF8", # 1 ref(s), first at 0x0035F784
   "ptr_0021FFE0@0x0021FFE0", # 1 ref(s), first at 0x0035F6FC
   "ptr_00220328@0x00220328", # 1 ref(s), first at 0x0035F7C8
@@ -254,18 +373,23 @@ entry_points = [
   "ptr_00221170@0x00221170", # 1 ref(s), first at 0x0035FC4C
   "ptr_00221758@0x00221758", # 1 ref(s), first at 0x0035F80C
   "ptr_00221928@0x00221928", # 1 ref(s), first at 0x0035FB9C
+  "ptr_00221A10@0x00221A10", # 1 ref(s), first at 0x0035FBA0
   "ptr_00221A18@0x00221A18", # 1 ref(s), first at 0x0035FBA4
+  "ptr_002221B8@0x002221B8", # 1 ref(s), first at 0x0035FBC8
   "ptr_00225210@0x00225210", # 1 ref(s), first at 0x0035FB80
   "ptr_00225910@0x00225910", # 1 ref(s), first at 0x0035FB14
   "ptr_00225918@0x00225918", # 1 ref(s), first at 0x0035FB18
   "ptr_002269D8@0x002269D8", # 1 ref(s), first at 0x0035F680
   "ptr_002269E0@0x002269E0", # 1 ref(s), first at 0x0035F684
   "ptr_0022EE98@0x0022EE98", # 1 ref(s), first at 0x003782EC
+  "ptr_00232170@0x00232170", # 1 ref(s), first at 0x00378390
   "ptr_00232178@0x00232178", # 1 ref(s), first at 0x00378394
   "ptr_00232180@0x00232180", # 1 ref(s), first at 0x0037838C
   "ptr_00232340@0x00232340", # 1 ref(s), first at 0x003783B0
   "ptr_00232940@0x00232940", # 1 ref(s), first at 0x0037868C
   "ptr_00232960@0x00232960", # 1 ref(s), first at 0x003786AC
+  "ptr_002329B0@0x002329B0", # 1 ref(s), first at 0x003786B0
+  "ptr_00232A10@0x00232A10", # 1 ref(s), first at 0x003786B4
   "ptr_00232E40@0x00232E40", # 1 ref(s), first at 0x003784D0
   "ptr_00232E48@0x00232E48", # 1 ref(s), first at 0x003784D4
   "ptr_00232E50@0x00232E50", # 1 ref(s), first at 0x003784CC
@@ -274,12 +398,16 @@ entry_points = [
   "ptr_00233A90@0x00233A90", # 1 ref(s), first at 0x00378678
   "ptr_00233EC8@0x00233EC8", # 1 ref(s), first at 0x0037834C
   "ptr_00234240@0x00234240", # 1 ref(s), first at 0x00378370
+  "ptr_00234F30@0x00234F30", # 1 ref(s), first at 0x00378750
   "ptr_00234F38@0x00234F38", # 1 ref(s), first at 0x00378754
   "ptr_00234F40@0x00234F40", # 1 ref(s), first at 0x0037874C
+  "ptr_00239198@0x00239198", # 1 ref(s), first at 0x00378450
+  "ptr_002391A8@0x002391A8", # 1 ref(s), first at 0x00378454
   "ptr_002391B0@0x002391B0", # 1 ref(s), first at 0x0037844C
   "ptr_00239970@0x00239970", # 1 ref(s), first at 0x00378490
   "ptr_00239978@0x00239978", # 1 ref(s), first at 0x00378494
   "ptr_00239980@0x00239980", # 1 ref(s), first at 0x0037848C
+  "ptr_0023A6F0@0x0023A6F0", # 1 ref(s), first at 0x00378550
   "ptr_0023A6F8@0x0023A6F8", # 1 ref(s), first at 0x00378554
   "ptr_0023A700@0x0023A700", # 1 ref(s), first at 0x0037854C
   "ptr_0023C1F0@0x0023C1F0", # 1 ref(s), first at 0x0037857C
@@ -289,10 +417,13 @@ entry_points = [
   "ptr_0023C560@0x0023C560", # 1 ref(s), first at 0x003785CC
   "ptr_0023C768@0x0023C768", # 1 ref(s), first at 0x003785EC
   "ptr_0023D080@0x0023D080", # 1 ref(s), first at 0x003783D0
+  "ptr_0023D090@0x0023D090", # 1 ref(s), first at 0x003783D4
   "ptr_0023D098@0x0023D098", # 1 ref(s), first at 0x003783CC
+  "ptr_0023D478@0x0023D478", # 1 ref(s), first at 0x003783F0
   "ptr_0023F9B0@0x0023F9B0", # 1 ref(s), first at 0x00378590
   "ptr_0023F9B8@0x0023F9B8", # 1 ref(s), first at 0x00378594
   "ptr_0023F9C0@0x0023F9C0", # 1 ref(s), first at 0x0037858C
+  "ptr_0023FBB0@0x0023FBB0", # 1 ref(s), first at 0x0037860C
   "ptr_00240168@0x00240168", # 1 ref(s), first at 0x00378790
   "ptr_00240170@0x00240170", # 1 ref(s), first at 0x00378794
   "ptr_00240178@0x00240178", # 1 ref(s), first at 0x0037878C
@@ -302,17 +433,39 @@ entry_points = [
   "ptr_00242358@0x00242358", # 1 ref(s), first at 0x003786D0
   "ptr_00242360@0x00242360", # 1 ref(s), first at 0x003786D4
   "ptr_00242368@0x00242368", # 1 ref(s), first at 0x003786CC
+  "ptr_00242B30@0x00242B30", # 1 ref(s), first at 0x0037870C
+  "ptr_00242C40@0x00242C40", # 1 ref(s), first at 0x00378850
   "ptr_00242C48@0x00242C48", # 1 ref(s), first at 0x00378854
   "ptr_00242C50@0x00242C50", # 1 ref(s), first at 0x0037884C
   "ptr_00244288@0x00244288", # 1 ref(s), first at 0x0037880C
   "ptr_002442A8@0x002442A8", # 1 ref(s), first at 0x0037883C
+  "ptr_002443A0@0x002443A0", # 1 ref(s), first at 0x00378834
   "ptr_00244E48@0x00244E48", # 1 ref(s), first at 0x003787CC
+  "ptr_0024E538@0x0024E538", # 1 ref(s), first at 0x00390040
+  "ptr_0024E554@0x0024E554", # 1 ref(s), first at 0x00390044
+  "ptr_0024E570@0x0024E570", # 1 ref(s), first at 0x00390048
+  "ptr_0024E58C@0x0024E58C", # 1 ref(s), first at 0x0039004C
+  "ptr_0024E5A4@0x0024E5A4", # 1 ref(s), first at 0x00390050
+  "ptr_00250660@0x00250660", # 1 ref(s), first at 0x0039012C
+  "ptr_00250668@0x00250668", # 1 ref(s), first at 0x00390128
+  "ptr_00250670@0x00250670", # 1 ref(s), first at 0x00390124
+  "ptr_00250678@0x00250678", # 1 ref(s), first at 0x00390120
+  "ptr_00250680@0x00250680", # 1 ref(s), first at 0x0039011C
+  "ptr_00250688@0x00250688", # 1 ref(s), first at 0x00390118
   "ptr_0026B968@0x0026B968", # 1 ref(s), first at 0x0037ECDC
   "ptr_0026B970@0x0026B970", # 1 ref(s), first at 0x0037ECE4
   "ptr_00272530@0x00272530", # 204 ref(s), first at 0x0037F304
+  "ptr_00273A78@0x00273A78", # 1 ref(s), first at 0x00379F90
+  "ptr_0027FFD8@0x0027FFD8", # 1 ref(s), first at 0x0039A294
+  "ptr_0027FFE8@0x0027FFE8", # 2 ref(s), first at 0x0039A280
+  "ptr_0027FFF8@0x0027FFF8", # 1 ref(s), first at 0x0039A2A4
+  "ptr_00280000@0x00280000", # 1 ref(s), first at 0x0039A694
+  "ptr_00285B58@0x00285B58", # 1 ref(s), first at 0x00382884
   "ptr_00285B60@0x00285B60", # 1 ref(s), first at 0x0038288C
   "ptr_00285D68@0x00285D68", # 1 ref(s), first at 0x00382894
+  "ptr_00286130@0x00286130", # 25 ref(s), first at 0x003808DC
   "ptr_00286990@0x00286990", # 2 ref(s), first at 0x00382774
+  "ptr_002877E0@0x002877E0", # 4 ref(s), first at 0x00380A3C
   "ptr_002877E8@0x002877E8", # 5 ref(s), first at 0x00380A44
   "ptr_002877F0@0x002877F0", # 4 ref(s), first at 0x00380A4C
   "ptr_00287B20@0x00287B20", # 1 ref(s), first at 0x00382A24
@@ -321,20 +474,33 @@ entry_points = [
   "ptr_00289620@0x00289620", # 1 ref(s), first at 0x00382B4C
   "ptr_00289900@0x00289900", # 2 ref(s), first at 0x00382694
   "ptr_00289AD0@0x00289AD0", # 1 ref(s), first at 0x00382BC4
+  "ptr_00289BE0@0x00289BE0", # 1 ref(s), first at 0x00382C4C
   "ptr_00289E20@0x00289E20", # 1 ref(s), first at 0x00382C34
+  "ptr_00289EB0@0x00289EB0", # 1 ref(s), first at 0x00382C74
+  "ptr_00289EC0@0x00289EC0", # 1 ref(s), first at 0x00382C3C
+  "ptr_00289F28@0x00289F28", # 1 ref(s), first at 0x00382C5C
+  "ptr_00289F48@0x00289F48", # 1 ref(s), first at 0x00382C64
   "ptr_0028A138@0x0028A138", # 1 ref(s), first at 0x00382C24
+  "ptr_0028A8A8@0x0028A8A8", # 1 ref(s), first at 0x00382CF4
+  "ptr_0028A910@0x0028A910", # 1 ref(s), first at 0x00382CFC
+  "ptr_0028A920@0x0028A920", # 1 ref(s), first at 0x00382D04
   "ptr_0028A928@0x0028A928", # 1 ref(s), first at 0x00382CE4
   "ptr_0028A940@0x0028A940", # 1 ref(s), first at 0x00382CEC
   "ptr_0028A948@0x0028A948", # 1 ref(s), first at 0x00382CC4
+  "ptr_0028AA18@0x0028AA18", # 1 ref(s), first at 0x00382CBC
   "ptr_0028ABC8@0x0028ABC8", # 1 ref(s), first at 0x00382CAC
+  "ptr_0028AD40@0x0028AD40", # 1 ref(s), first at 0x00382D44
   "ptr_0028ADD0@0x0028ADD0", # 1 ref(s), first at 0x00382D34
   "ptr_0028B500@0x0028B500", # 1 ref(s), first at 0x00382E0C
+  "ptr_0028BA30@0x0028BA30", # 1 ref(s), first at 0x00382DCC
   "ptr_0028BA38@0x0028BA38", # 1 ref(s), first at 0x00382DFC
   "ptr_0028BA40@0x0028BA40", # 1 ref(s), first at 0x00382E14
+  "ptr_0028BE20@0x0028BE20", # 1 ref(s), first at 0x00382DBC
   "ptr_0028C030@0x0028C030", # 1 ref(s), first at 0x00382E54
   "ptr_0028C2D0@0x0028C2D0", # 1 ref(s), first at 0x00382E44
   "ptr_0028C4E0@0x0028C4E0", # 1 ref(s), first at 0x00382F04
   "ptr_0028C4F0@0x0028C4F0", # 1 ref(s), first at 0x00382F0C
+  "ptr_0028C500@0x0028C500", # 1 ref(s), first at 0x00382F14
   "ptr_0028C508@0x0028C508", # 1 ref(s), first at 0x00382ED4
   "ptr_0028C548@0x0028C548", # 1 ref(s), first at 0x00382EF4
   "ptr_0028C560@0x0028C560", # 1 ref(s), first at 0x00382EFC
@@ -342,34 +508,55 @@ entry_points = [
   "ptr_0028C878@0x0028C878", # 1 ref(s), first at 0x00382F6C
   "ptr_0028CB50@0x0028CB50", # 1 ref(s), first at 0x00382F54
   "ptr_0028CB58@0x0028CB58", # 1 ref(s), first at 0x00382F8C
+  "ptr_0028CBF8@0x0028CBF8", # 1 ref(s), first at 0x00382F94
+  "ptr_0028CC08@0x0028CC08", # 1 ref(s), first at 0x00382F9C
   "ptr_0028CC10@0x0028CC10", # 1 ref(s), first at 0x00382F7C
+  "ptr_0028CC30@0x0028CC30", # 1 ref(s), first at 0x00382F84
   "ptr_0028CE20@0x0028CE20", # 1 ref(s), first at 0x00382F44
   "ptr_002958A0@0x002958A0", # 1 ref(s), first at 0x003831BC
   "ptr_00296458@0x00296458", # 1 ref(s), first at 0x003831B4
   "ptr_0029DBF8@0x0029DBF8", # 1 ref(s), first at 0x003834EC
   "ptr_0029DC20@0x0029DC20", # 1 ref(s), first at 0x003834F4
   "ptr_0029DC48@0x0029DC48", # 1 ref(s), first at 0x003834FC
+  "ptr_0029F440@0x0029F440", # 1 ref(s), first at 0x00383624
+  "ptr_002A1098@0x002A1098", # 1 ref(s), first at 0x0038379C
   "ptr_002A10A0@0x002A10A0", # 1 ref(s), first at 0x00383794
   "ptr_002A1440@0x002A1440", # 1 ref(s), first at 0x003837EC
   "ptr_002A14A0@0x002A14A0", # 1 ref(s), first at 0x003837DC
   "ptr_002A14B0@0x002A14B0", # 1 ref(s), first at 0x003837E4
+  "ptr_002AD860@0x002AD860", # 1 ref(s), first at 0x00383C24
+  "ptr_002AD870@0x002AD870", # 1 ref(s), first at 0x00383C44
+  "ptr_002AD938@0x002AD938", # 1 ref(s), first at 0x00383C64
   "ptr_002AD980@0x002AD980", # 1 ref(s), first at 0x00383CA4
   "ptr_002ADA48@0x002ADA48", # 1 ref(s), first at 0x00383C94
   "ptr_002ADCE0@0x002ADCE0", # 1 ref(s), first at 0x00382DDC
   "ptr_002AE1F8@0x002AE1F8", # 29 ref(s), first at 0x00382FE4
   "ptr_002B1990@0x002B1990", # 1 ref(s), first at 0x00383D0C
+  "ptr_002B2A50@0x002B2A50", # 1 ref(s), first at 0x00383D44
   "ptr_002B2A80@0x002B2A80", # 1 ref(s), first at 0x00383D8C
+  "ptr_002B2B38@0x002B2B38", # 1 ref(s), first at 0x00383D94
+  "ptr_002B2E50@0x002B2E50", # 1 ref(s), first at 0x00383D9C
   "ptr_002B3000@0x002B3000", # 1 ref(s), first at 0x00383D7C
   "ptr_002B3670@0x002B3670", # 2 ref(s), first at 0x00383DFC
   "ptr_002B36B0@0x002B36B0", # 2 ref(s), first at 0x00383E1C
+  "ptr_002B37B8@0x002B37B8", # 2 ref(s), first at 0x00383E74
   "ptr_002B3A30@0x002B3A30", # 2 ref(s), first at 0x00383DC4
+  "ptr_002B4340@0x002B4340", # 2 ref(s), first at 0x00383E0C
   "ptr_002B4388@0x002B4388", # 2 ref(s), first at 0x00383E14
+  "ptr_002B43F8@0x002B43F8", # 2 ref(s), first at 0x00383DF4
+  "ptr_002B4408@0x002B4408", # 2 ref(s), first at 0x00383E7C
   "ptr_002B4480@0x002B4480", # 2 ref(s), first at 0x00383E84
+  "ptr_002B4498@0x002B4498", # 2 ref(s), first at 0x00383E8C
+  "ptr_002B44F0@0x002B44F0", # 2 ref(s), first at 0x00383E94
   "ptr_002B4510@0x002B4510", # 2 ref(s), first at 0x00383DD4
   "ptr_002B4518@0x002B4518", # 1 ref(s), first at 0x00383DDC
   "ptr_002B4570@0x002B4570", # 1 ref(s), first at 0x00383F04
+  "ptr_002B4588@0x002B4588", # 1 ref(s), first at 0x00383F0C
+  "ptr_002B45A0@0x002B45A0", # 1 ref(s), first at 0x00383F14
   "ptr_002B45A8@0x002B45A8", # 1 ref(s), first at 0x00383F1C
   "ptr_002B45B0@0x002B45B0", # 1 ref(s), first at 0x00383F24
+  "ptr_002B45C8@0x002B45C8", # 1 ref(s), first at 0x00383F2C
+  "ptr_002B45E0@0x002B45E0", # 1 ref(s), first at 0x00383F7C
   "ptr_002B45E8@0x002B45E8", # 1 ref(s), first at 0x00383F84
   "ptr_002B45F0@0x002B45F0", # 1 ref(s), first at 0x00383F8C
   "ptr_002B45F8@0x002B45F8", # 1 ref(s), first at 0x00383F94
@@ -382,10 +569,15 @@ entry_points = [
   "ptr_002B4660@0x002B4660", # 1 ref(s), first at 0x00383EE4
   "ptr_002B4668@0x002B4668", # 1 ref(s), first at 0x00383FA4
   "ptr_002B4670@0x002B4670", # 1 ref(s), first at 0x00383FB4
+  "ptr_002B46A8@0x002B46A8", # 1 ref(s), first at 0x00383FAC
   "ptr_002B4800@0x002B4800", # 1 ref(s), first at 0x00383FFC
   "ptr_002B4BE8@0x002B4BE8", # 1 ref(s), first at 0x00384014
+  "ptr_002B4C00@0x002B4C00", # 1 ref(s), first at 0x0038401C
+  "ptr_002B4C18@0x002B4C18", # 1 ref(s), first at 0x00384024
   "ptr_002B4C20@0x002B4C20", # 1 ref(s), first at 0x0038402C
   "ptr_002B4C28@0x002B4C28", # 1 ref(s), first at 0x00384034
+  "ptr_002B4C40@0x002B4C40", # 1 ref(s), first at 0x0038403C
+  "ptr_002B4C58@0x002B4C58", # 2 ref(s), first at 0x00383F74
   "ptr_002B4C60@0x002B4C60", # 1 ref(s), first at 0x0038408C
   "ptr_002B4C68@0x002B4C68", # 1 ref(s), first at 0x00384094
   "ptr_002B4C70@0x002B4C70", # 1 ref(s), first at 0x0038409C
@@ -395,31 +587,58 @@ entry_points = [
   "ptr_002B4C90@0x002B4C90", # 1 ref(s), first at 0x00383FDC
   "ptr_002B4C98@0x002B4C98", # 1 ref(s), first at 0x00383FF4
   "ptr_002B4CA8@0x002B4CA8", # 1 ref(s), first at 0x003840C4
+  "ptr_002B4CE0@0x002B4CE0", # 1 ref(s), first at 0x003840B4
   "ptr_002B4CE8@0x002B4CE8", # 5 ref(s), first at 0x00383EF4
+  "ptr_002B4F88@0x002B4F88", # 7 ref(s), first at 0x00383E54
+  "ptr_002B4F98@0x002B4F98", # 7 ref(s), first at 0x00383E5C
+  "ptr_002B4FA8@0x002B4FA8", # 7 ref(s), first at 0x00383E64
   "ptr_002B4FE0@0x002B4FE0", # 5 ref(s), first at 0x00383E6C
+  "ptr_002B50B0@0x002B50B0", # 6 ref(s), first at 0x00383EA4
+  "ptr_002B5100@0x002B5100", # 2 ref(s), first at 0x0038422C
   "ptr_002B5130@0x002B5130", # 2 ref(s), first at 0x00384234
   "ptr_002B5160@0x002B5160", # 2 ref(s), first at 0x0038424C
+  "ptr_002B5188@0x002B5188", # 2 ref(s), first at 0x00384254
   "ptr_002B5370@0x002B5370", # 2 ref(s), first at 0x003841F4
+  "ptr_002B5458@0x002B5458", # 2 ref(s), first at 0x00384214
+  "ptr_002B5B38@0x002B5B38", # 2 ref(s), first at 0x0038423C
+  "ptr_002B5BA0@0x002B5BA0", # 2 ref(s), first at 0x00384244
   "ptr_002B5BD8@0x002B5BD8", # 2 ref(s), first at 0x003842A4
   "ptr_002B5C40@0x002B5C40", # 2 ref(s), first at 0x003842AC
+  "ptr_002B5C68@0x002B5C68", # 2 ref(s), first at 0x003842B4
+  "ptr_002B5C80@0x002B5C80", # 2 ref(s), first at 0x003842BC
+  "ptr_002B5CD8@0x002B5CD8", # 2 ref(s), first at 0x003842C4
   "ptr_002B5CF8@0x002B5CF8", # 2 ref(s), first at 0x00384204
   "ptr_002B5D00@0x002B5D00", # 1 ref(s), first at 0x0038420C
+  "ptr_002B5F60@0x002B5F60", # 1 ref(s), first at 0x00384314
+  "ptr_002B6170@0x002B6170", # 1 ref(s), first at 0x0038441C
   "ptr_002B68E0@0x002B68E0", # 1 ref(s), first at 0x00384524
+  "ptr_002B6BD8@0x002B6BD8", # 1 ref(s), first at 0x00384514
+  "ptr_002B71D8@0x002B71D8", # 1 ref(s), first at 0x0038458C
   "ptr_002B7628@0x002B7628", # 1 ref(s), first at 0x003845E4
   "ptr_002B7C28@0x002B7C28", # 1 ref(s), first at 0x0038466C
+  "ptr_002B7F90@0x002B7F90", # 1 ref(s), first at 0x0038465C
   "ptr_002BDF50@0x002BDF50", # 1 ref(s), first at 0x0038479C
   "ptr_002BE528@0x002BE528", # 1 ref(s), first at 0x003847D4
   "ptr_002BFAE8@0x002BFAE8", # 1 ref(s), first at 0x00384854
   "ptr_002C0238@0x002C0238", # 1 ref(s), first at 0x003848C4
+  "ptr_002C0308@0x002C0308", # 1 ref(s), first at 0x003848E4
+  "ptr_002C0328@0x002C0328", # 1 ref(s), first at 0x003848DC
+  "ptr_002C0630@0x002C0630", # 2 ref(s), first at 0x0038493C
+  "ptr_002C07A0@0x002C07A0", # 2 ref(s), first at 0x0038492C
   "ptr_002C0830@0x002C0830", # 1 ref(s), first at 0x0038496C
+  "ptr_002C0E00@0x002C0E00", # 1 ref(s), first at 0x003849CC
   "ptr_002C0E08@0x002C0E08", # 1 ref(s), first at 0x00384A3C
+  "ptr_002C0EB8@0x002C0EB8", # 1 ref(s), first at 0x00384A24
   "ptr_002C0EC0@0x002C0EC0", # 1 ref(s), first at 0x00384A14
   "ptr_002C0EC8@0x002C0EC8", # 1 ref(s), first at 0x00384A1C
   "ptr_002C0ED0@0x002C0ED0", # 1 ref(s), first at 0x00384A2C
   "ptr_002C0FD0@0x002C0FD0", # 1 ref(s), first at 0x00384A7C
   "ptr_002C0FD8@0x002C0FD8", # 1 ref(s), first at 0x00384A84
   "ptr_002C1110@0x002C1110", # 1 ref(s), first at 0x00384A6C
+  "ptr_002C80E0@0x002C80E0", # 1 ref(s), first at 0x0035F250
   "ptr_002D1FE0@0x002D1FE0", # 12 ref(s), first at 0x0037ED74
+  "ptr_002D3310@0x002D3310", # 1 ref(s), first at 0x0035DFFC
+  "ptr_00305A28@0x00305A28", # 1 ref(s), first at 0x00384DA4
   "ptr_00317D10@0x00317D10", # 1 ref(s), first at 0x00384E1C
   "ptr_0031AF38@0x0031AF38", # 1 ref(s), first at 0x00384E2C
   "ptr_0031B020@0x0031B020", # 1 ref(s), first at 0x00384E6C
@@ -429,23 +648,41 @@ entry_points = [
   "ptr_00330DC0@0x00330DC0", # 1 ref(s), first at 0x00380A2C
   "ptr_00330DC8@0x00330DC8", # 1 ref(s), first at 0x00380A34
   "ptr_00331718@0x00331718", # 1 ref(s), first at 0x00382714
+  "ptr_003317C8@0x003317C8", # 5 ref(s), first at 0x0038244C
   "ptr_003317D0@0x003317D0", # 4 ref(s), first at 0x0038257C
+  "ptr_003317E8@0x003317E8", # 5 ref(s), first at 0x00382484
+  "ptr_003317F8@0x003317F8", # 1 ref(s), first at 0x003825BC
+  "ptr_00331820@0x00331820", # 1 ref(s), first at 0x003825B4
+  "ptr_00331888@0x00331888", # 2 ref(s), first at 0x0038238C
+  "ptr_00331970@0x00331970", # 1 ref(s), first at 0x003821DC
   "ptr_00331978@0x00331978", # 1 ref(s), first at 0x003821E4
   "ptr_00331980@0x00331980", # 1 ref(s), first at 0x003821EC
   "ptr_00331988@0x00331988", # 1 ref(s), first at 0x003821C4
   "ptr_00331990@0x00331990", # 11 ref(s), first at 0x0037ED1C
   "ptr_003319C8@0x003319C8", # 9 ref(s), first at 0x0037EF9C
+  "ptr_00331A78@0x00331A78", # 1 ref(s), first at 0x00381F6C
+  "ptr_00331BA0@0x00331BA0", # 1 ref(s), first at 0x00381E84
   "ptr_00331BE0@0x00331BE0", # 4 ref(s), first at 0x00381D04
   "ptr_00331BE8@0x00331BE8", # 5 ref(s), first at 0x00381CC4
   "ptr_00331BF0@0x00331BF0", # 1 ref(s), first at 0x00381E34
   "ptr_00331BF8@0x00331BF8", # 2 ref(s), first at 0x00381CD4
   "ptr_00331C00@0x00331C00", # 6 ref(s), first at 0x00381CDC
+  "ptr_00331C18@0x00331C18", # 1 ref(s), first at 0x00381DCC
+  "ptr_00331C68@0x00331C68", # 1 ref(s), first at 0x00381DDC
   "ptr_00331C70@0x00331C70", # 1 ref(s), first at 0x00381DE4
+  "ptr_00331C80@0x00331C80", # 1 ref(s), first at 0x00381D84
+  "ptr_00331C98@0x00331C98", # 1 ref(s), first at 0x00381D3C
   "ptr_00331CC0@0x00331CC0", # 1 ref(s), first at 0x00381CF4
+  "ptr_00331CF8@0x00331CF8", # 1 ref(s), first at 0x00381CAC
   "ptr_00331D08@0x00331D08", # 1 ref(s), first at 0x00381CBC
+  "ptr_00331D70@0x00331D70", # 1 ref(s), first at 0x00381C84
   "ptr_00331DE0@0x00331DE0", # 1 ref(s), first at 0x00381C34
   "ptr_00331DE8@0x00331DE8", # 1 ref(s), first at 0x00381C3C
+  "ptr_00332348@0x00332348", # 1 ref(s), first at 0x00381A1C
   "ptr_003327F0@0x003327F0", # 1 ref(s), first at 0x00397244
+  "ptr_00332B90@0x00332B90", # 1 ref(s), first at 0x0038164C
+  "ptr_00332BA8@0x00332BA8", # 1 ref(s), first at 0x003812D4
+  "ptr_00333190@0x00333190", # 1 ref(s), first at 0x00395694
   "ptr_003331B8@0x003331B8", # 1 ref(s), first at 0x003956B0
   "ptr_003331E0@0x003331E0", # 1 ref(s), first at 0x0039576C
   "ptr_00333208@0x00333208", # 1 ref(s), first at 0x00395788
@@ -456,9 +693,15 @@ entry_points = [
   "ptr_003332D0@0x003332D0", # 1 ref(s), first at 0x003955D4
   "ptr_003332F8@0x003332F8", # 1 ref(s), first at 0x003955F0
   "ptr_00333320@0x00333320", # 1 ref(s), first at 0x003954FC
+  "ptr_00333348@0x00333348", # 1 ref(s), first at 0x0038125C
+  "ptr_003334F0@0x003334F0", # 1 ref(s), first at 0x0038112C
+  "ptr_00333500@0x00333500", # 1 ref(s), first at 0x00381154
+  "ptr_003338F8@0x003338F8", # 1 ref(s), first at 0x0039742C
   "ptr_00333920@0x00333920", # 1 ref(s), first at 0x00397448
   "ptr_00333948@0x00333948", # 1 ref(s), first at 0x00381074
+  "ptr_00333C70@0x00333C70", # 1 ref(s), first at 0x00380F0C
   "ptr_00333D10@0x00333D10", # 1 ref(s), first at 0x00380EBC
+  "ptr_00333D88@0x00333D88", # 2 ref(s), first at 0x0037EDB4
   "ptr_00333D90@0x00333D90", # 2 ref(s), first at 0x0037EDDC
   "ptr_00333D98@0x00333D98", # 2 ref(s), first at 0x0037EDFC
   "ptr_00333DA0@0x00333DA0", # 1 ref(s), first at 0x00380D8C
@@ -470,15 +713,23 @@ entry_points = [
   "ptr_00333DE8@0x00333DE8", # 2 ref(s), first at 0x0037EE64
   "ptr_00333DF0@0x00333DF0", # 2 ref(s), first at 0x0037EE6C
   "ptr_00333DF8@0x00333DF8", # 2 ref(s), first at 0x0037EE7C
+  "ptr_00333E10@0x00333E10", # 2 ref(s), first at 0x0037EE9C
   "ptr_00333E18@0x00333E18", # 2 ref(s), first at 0x0037EEA4
+  "ptr_00333E28@0x00333E28", # 1 ref(s), first at 0x00380E34
+  "ptr_00333E38@0x00333E38", # 1 ref(s), first at 0x00380E44
   "ptr_00333E40@0x00333E40", # 1 ref(s), first at 0x00380E4C
   "ptr_00333E48@0x00333E48", # 1 ref(s), first at 0x00380E54
   "ptr_00333E50@0x00333E50", # 2 ref(s), first at 0x0037EED4
+  "ptr_00333E60@0x00333E60", # 2 ref(s), first at 0x0037F164
   "ptr_00333E68@0x00333E68", # 1 ref(s), first at 0x00380BF4
   "ptr_00333E70@0x00333E70", # 2 ref(s), first at 0x0037F18C
   "ptr_00333E78@0x00333E78", # 1 ref(s), first at 0x00380C04
   "ptr_00333E80@0x00333E80", # 1 ref(s), first at 0x00380C0C
   "ptr_00333E88@0x00333E88", # 2 ref(s), first at 0x0037F1A4
+  "ptr_00333F00@0x00333F00", # 2 ref(s), first at 0x0037F20C
+  "ptr_00333F20@0x00333F20", # 2 ref(s), first at 0x0037F1B4
+  "ptr_00333F60@0x00333F60", # 2 ref(s), first at 0x0037F1BC
+  "ptr_00333FB8@0x00333FB8", # 2 ref(s), first at 0x0037F1C4
   "ptr_00334070@0x00334070", # 1 ref(s), first at 0x00380B1C
   "ptr_00334078@0x00334078", # 1 ref(s), first at 0x00380B24
   "ptr_00334080@0x00334080", # 1 ref(s), first at 0x00380B2C
@@ -486,6 +737,8 @@ entry_points = [
   "ptr_00334180@0x00334180", # 1 ref(s), first at 0x00380ADC
   "ptr_00334188@0x00334188", # 1 ref(s), first at 0x00380AE4
   "ptr_00334190@0x00334190", # 1 ref(s), first at 0x00380AEC
+  "ptr_003341C8@0x003341C8", # 1 ref(s), first at 0x00380AF4
+  "ptr_00334EA8@0x00334EA8", # 8 ref(s), first at 0x0037F4D4
   "ptr_00334EB0@0x00334EB0", # 16 ref(s), first at 0x0037F3C4
   "ptr_00334EB8@0x00334EB8", # 1 ref(s), first at 0x003807BC
   "ptr_00334EC0@0x00334EC0", # 18 ref(s), first at 0x0037F3D4
@@ -521,57 +774,129 @@ entry_points = [
   "ptr_00334FB0@0x00334FB0", # 16 ref(s), first at 0x0037F404
   "ptr_00334FB8@0x00334FB8", # 1 ref(s), first at 0x0038078C
   "ptr_00334FC0@0x00334FC0", # 1 ref(s), first at 0x003804B4
+  "ptr_00334FD0@0x00334FD0", # 1 ref(s), first at 0x003804C4
   "ptr_00334FD8@0x00334FD8", # 1 ref(s), first at 0x0038055C
+  "ptr_00334FE8@0x00334FE8", # 1 ref(s), first at 0x00380294
+  "ptr_00334FF8@0x00334FF8", # 1 ref(s), first at 0x0038032C
   "ptr_00335000@0x00335000", # 8 ref(s), first at 0x0037F5CC
   "ptr_00335008@0x00335008", # 1 ref(s), first at 0x003801FC
   "ptr_00335010@0x00335010", # 1 ref(s), first at 0x003800E4
   "ptr_00335018@0x00335018", # 1 ref(s), first at 0x0037FFCC
   "ptr_00335020@0x00335020", # 1 ref(s), first at 0x0037FE1C
   "ptr_00335040@0x00335040", # 1 ref(s), first at 0x0037FD94
+  "ptr_00335050@0x00335050", # 1 ref(s), first at 0x0037FD9C
+  "ptr_00335060@0x00335060", # 1 ref(s), first at 0x0037FEB4
   "ptr_00335068@0x00335068", # 1 ref(s), first at 0x0037F87C
   "ptr_00335070@0x00335070", # 1 ref(s), first at 0x0037F764
   "ptr_00335078@0x00335078", # 1 ref(s), first at 0x0037F4B4
+  "ptr_003350E0@0x003350E0", # 2 ref(s), first at 0x0037F00C
   "ptr_003350E8@0x003350E8", # 2 ref(s), first at 0x0037F02C
   "ptr_003350F0@0x003350F0", # 2 ref(s), first at 0x0037F034
   "ptr_003350F8@0x003350F8", # 2 ref(s), first at 0x0037F054
+  "ptr_00335108@0x00335108", # 1 ref(s), first at 0x0037F324
   "ptr_00335110@0x00335110", # 1 ref(s), first at 0x0037F334
   "ptr_00335118@0x00335118", # 1 ref(s), first at 0x0037F19C
   "ptr_00335130@0x00335130", # 1 ref(s), first at 0x0037F1EC
   "ptr_00335288@0x00335288", # 1 ref(s), first at 0x0037F1FC
   "ptr_00335478@0x00335478", # 1 ref(s), first at 0x0037F06C
   "ptr_00335480@0x00335480", # 1 ref(s), first at 0x0037EFBC
+  "ptr_003354B8@0x003354B8", # 1 ref(s), first at 0x00397BFC
+  "ptr_003354E0@0x003354E0", # 1 ref(s), first at 0x00397B0C
   "ptr_00335508@0x00335508", # 1 ref(s), first at 0x00397B28
+  "ptr_003357E0@0x003357E0", # 1 ref(s), first at 0x00397C14
+  "ptr_00335A58@0x00335A58", # 1 ref(s), first at 0x0037EE24
   "ptr_00335A60@0x00335A60", # 1 ref(s), first at 0x0037EE1C
+  "ptr_00335A70@0x00335A70", # 1 ref(s), first at 0x0037EEDC
   "ptr_00335AE0@0x00335AE0", # 1 ref(s), first at 0x0037ED64
   "ptr_00336560@0x00336560", # 1 ref(s), first at 0x0037F0E4
+  "ptr_00336870@0x00336870", # 1 ref(s), first at 0x0037F0FC
+  "ptr_00336888@0x00336888", # 1 ref(s), first at 0x0037F104
+  "ptr_003368D8@0x003368D8", # 1 ref(s), first at 0x00380F9C
+  "ptr_00336A10@0x00336A10", # 1 ref(s), first at 0x00380FAC
+  "ptr_00336A70@0x00336A70", # 1 ref(s), first at 0x00380FB4
   "ptr_00336A88@0x00336A88", # 1 ref(s), first at 0x00380FBC
+  "ptr_00336AE0@0x00336AE0", # 1 ref(s), first at 0x00380FE4
+  "ptr_00336BC8@0x00336BC8", # 1 ref(s), first at 0x00380FF4
+  "ptr_00336C10@0x00336C10", # 1 ref(s), first at 0x00380FFC
   "ptr_00336C28@0x00336C28", # 1 ref(s), first at 0x00381004
+  "ptr_00336C80@0x00336C80", # 1 ref(s), first at 0x0038102C
+  "ptr_00336D68@0x00336D68", # 1 ref(s), first at 0x0038103C
   "ptr_00336DB0@0x00336DB0", # 1 ref(s), first at 0x00381044
+  "ptr_00336DC8@0x00336DC8", # 1 ref(s), first at 0x0038104C
+  "ptr_00336E18@0x00336E18", # 1 ref(s), first at 0x003811F4
+  "ptr_00336F90@0x00336F90", # 1 ref(s), first at 0x00381204
   "ptr_00337060@0x00337060", # 1 ref(s), first at 0x0038120C
   "ptr_00337078@0x00337078", # 1 ref(s), first at 0x00381214
+  "ptr_003370D0@0x003370D0", # 1 ref(s), first at 0x003813F4
+  "ptr_003371F0@0x003371F0", # 1 ref(s), first at 0x00381404
+  "ptr_00337270@0x00337270", # 1 ref(s), first at 0x0038140C
   "ptr_00337288@0x00337288", # 1 ref(s), first at 0x00381414
+  "ptr_003372E0@0x003372E0", # 1 ref(s), first at 0x0038143C
+  "ptr_00337428@0x00337428", # 1 ref(s), first at 0x0038144C
+  "ptr_003374A0@0x003374A0", # 1 ref(s), first at 0x00381454
   "ptr_003374B8@0x003374B8", # 1 ref(s), first at 0x0038145C
+  "ptr_00337510@0x00337510", # 1 ref(s), first at 0x00381484
+  "ptr_003376E0@0x003376E0", # 1 ref(s), first at 0x00381494
   "ptr_003377D8@0x003377D8", # 1 ref(s), first at 0x0038149C
   "ptr_003377F0@0x003377F0", # 1 ref(s), first at 0x003814A4
+  "ptr_00337848@0x00337848", # 1 ref(s), first at 0x0038169C
+  "ptr_00337960@0x00337960", # 1 ref(s), first at 0x003816AC
+  "ptr_003379D8@0x003379D8", # 1 ref(s), first at 0x003816B4
   "ptr_003379F0@0x003379F0", # 1 ref(s), first at 0x003816BC
+  "ptr_00337A48@0x00337A48", # 1 ref(s), first at 0x003816E4
+  "ptr_00337B50@0x00337B50", # 1 ref(s), first at 0x003816F4
   "ptr_00337BB8@0x00337BB8", # 1 ref(s), first at 0x003816FC
+  "ptr_00337BD0@0x00337BD0", # 1 ref(s), first at 0x00381704
+  "ptr_00337C20@0x00337C20", # 1 ref(s), first at 0x0038172C
+  "ptr_00337D28@0x00337D28", # 1 ref(s), first at 0x0038173C
   "ptr_00337D90@0x00337D90", # 1 ref(s), first at 0x00381744
+  "ptr_00337DA8@0x00337DA8", # 1 ref(s), first at 0x0038174C
+  "ptr_00337DF8@0x00337DF8", # 1 ref(s), first at 0x00381774
+  "ptr_00337EF8@0x00337EF8", # 1 ref(s), first at 0x00381784
+  "ptr_00337F58@0x00337F58", # 1 ref(s), first at 0x0038178C
   "ptr_00337F70@0x00337F70", # 1 ref(s), first at 0x00381794
+  "ptr_00337FC8@0x00337FC8", # 1 ref(s), first at 0x003817BC
+  "ptr_003380D0@0x003380D0", # 1 ref(s), first at 0x003817CC
   "ptr_00338138@0x00338138", # 1 ref(s), first at 0x003817D4
+  "ptr_00338150@0x00338150", # 1 ref(s), first at 0x003817DC
+  "ptr_003381A0@0x003381A0", # 1 ref(s), first at 0x00381804
+  "ptr_003382E8@0x003382E8", # 1 ref(s), first at 0x00381814
+  "ptr_00338390@0x00338390", # 1 ref(s), first at 0x0038181C
   "ptr_003383A8@0x003383A8", # 1 ref(s), first at 0x00381824
+  "ptr_00338400@0x00338400", # 1 ref(s), first at 0x0038184C
+  "ptr_00338580@0x00338580", # 1 ref(s), first at 0x0038185C
   "ptr_00338658@0x00338658", # 1 ref(s), first at 0x00381864
   "ptr_00338670@0x00338670", # 1 ref(s), first at 0x0038186C
+  "ptr_003386C8@0x003386C8", # 1 ref(s), first at 0x00381894
+  "ptr_003387C8@0x003387C8", # 1 ref(s), first at 0x003818A4
+  "ptr_00338828@0x00338828", # 1 ref(s), first at 0x003818AC
   "ptr_00338840@0x00338840", # 1 ref(s), first at 0x003818B4
+  "ptr_00338898@0x00338898", # 1 ref(s), first at 0x003818DC
+  "ptr_00338998@0x00338998", # 1 ref(s), first at 0x003818EC
+  "ptr_003389F8@0x003389F8", # 1 ref(s), first at 0x003818F4
   "ptr_00338A10@0x00338A10", # 1 ref(s), first at 0x003818FC
+  "ptr_00338A68@0x00338A68", # 1 ref(s), first at 0x00381924
+  "ptr_00338BA8@0x00338BA8", # 1 ref(s), first at 0x00381934
+  "ptr_00338C48@0x00338C48", # 1 ref(s), first at 0x0038193C
   "ptr_00338C60@0x00338C60", # 1 ref(s), first at 0x00381944
+  "ptr_00338CB8@0x00338CB8", # 1 ref(s), first at 0x0038196C
+  "ptr_00338E28@0x00338E28", # 1 ref(s), first at 0x0038197C
   "ptr_00338EF0@0x00338EF0", # 1 ref(s), first at 0x00381984
   "ptr_00338F08@0x00338F08", # 1 ref(s), first at 0x0038198C
+  "ptr_00338F60@0x00338F60", # 1 ref(s), first at 0x00381A8C
+  "ptr_003390D8@0x003390D8", # 1 ref(s), first at 0x00381A9C
   "ptr_003391A8@0x003391A8", # 1 ref(s), first at 0x00381AA4
   "ptr_003391C0@0x003391C0", # 1 ref(s), first at 0x00381AAC
+  "ptr_00339218@0x00339218", # 1 ref(s), first at 0x00381AD4
+  "ptr_00339348@0x00339348", # 1 ref(s), first at 0x00381AE4
+  "ptr_003393D8@0x003393D8", # 1 ref(s), first at 0x00381AEC
   "ptr_003393F0@0x003393F0", # 1 ref(s), first at 0x00381AF4
+  "ptr_00339448@0x00339448", # 1 ref(s), first at 0x00381B1C
+  "ptr_003395E0@0x003395E0", # 1 ref(s), first at 0x00381B2C
   "ptr_003396D0@0x003396D0", # 1 ref(s), first at 0x00381B34
   "ptr_003396E8@0x003396E8", # 1 ref(s), first at 0x00381B3C
   "ptr_003398D0@0x003398D0", # 1 ref(s), first at 0x0038282C
+  "ptr_00339AB0@0x00339AB0", # 1 ref(s), first at 0x003827DC
   "ptr_00339AB8@0x00339AB8", # 1 ref(s), first at 0x003827E4
   "ptr_00339D00@0x00339D00", # 1 ref(s), first at 0x003828CC
   "ptr_00339DB0@0x00339DB0", # 1 ref(s), first at 0x00382944
@@ -581,15 +906,30 @@ entry_points = [
   "ptr_0033A070@0x0033A070", # 1 ref(s), first at 0x00382A5C
   "ptr_0033A100@0x0033A100", # 1 ref(s), first at 0x00382A7C
   "ptr_0033A368@0x0033A368", # 1 ref(s), first at 0x00382C0C
+  "ptr_0033A4C0@0x0033A4C0", # 2 ref(s), first at 0x00382C7C
   "ptr_0033A8C8@0x0033A8C8", # 1 ref(s), first at 0x00382F2C
   "ptr_0033A950@0x0033A950", # 1 ref(s), first at 0x00382FB4
   "ptr_0033A9B8@0x0033A9B8", # 1 ref(s), first at 0x00383044
+  "ptr_0033AC98@0x0033AC98", # 1 ref(s), first at 0x0038302C
+  "ptr_0033B500@0x0033B500", # 1 ref(s), first at 0x00383104
+  "ptr_0033B908@0x0033B908", # 1 ref(s), first at 0x0038314C
   "ptr_0033BB10@0x0033BB10", # 1 ref(s), first at 0x003831CC
+  "ptr_0033D8E8@0x0033D8E8", # 1 ref(s), first at 0x003832FC
+  "ptr_0033DEB0@0x0033DEB0", # 1 ref(s), first at 0x00383344
+  "ptr_0033E630@0x0033E630", # 1 ref(s), first at 0x0038341C
+  "ptr_0033FBA0@0x0033FBA0", # 1 ref(s), first at 0x003834CC
+  "ptr_003402B8@0x003402B8", # 1 ref(s), first at 0x003835BC
   "ptr_00340C60@0x00340C60", # 1 ref(s), first at 0x00383604
+  "ptr_00341280@0x00341280", # 1 ref(s), first at 0x003836DC
   "ptr_00341A28@0x00341A28", # 1 ref(s), first at 0x0038378C
   "ptr_00341A30@0x00341A30", # 1 ref(s), first at 0x003837A4
   "ptr_00341A38@0x00341A38", # 1 ref(s), first at 0x003837AC
+  "ptr_00341DB8@0x00341DB8", # 1 ref(s), first at 0x0038388C
   "ptr_00341E20@0x00341E20", # 1 ref(s), first at 0x003838EC
+  "ptr_003431B8@0x003431B8", # 1 ref(s), first at 0x00383B04
+  "ptr_003432A8@0x003432A8", # 1 ref(s), first at 0x00383B0C
+  "ptr_00343888@0x00343888", # 1 ref(s), first at 0x00383B2C
+  "ptr_00344FD0@0x00344FD0", # 1 ref(s), first at 0x00383C04
   "ptr_00345530@0x00345530", # 1 ref(s), first at 0x00383D64
   "ptr_00345708@0x00345708", # 1 ref(s), first at 0x003842EC
   "ptr_003457E8@0x003457E8", # 1 ref(s), first at 0x003845CC
@@ -611,12 +951,14 @@ entry_points = [
   "ptr_00346668@0x00346668", # 1 ref(s), first at 0x00384AA4
   "ptr_003466B8@0x003466B8", # 1 ref(s), first at 0x00384B04
   "ptr_00346710@0x00346710", # 1 ref(s), first at 0x00384B0C
+  "ptr_00346748@0x00346748", # 1 ref(s), first at 0x00384B14
   "ptr_00346758@0x00346758", # 1 ref(s), first at 0x00384B1C
   "ptr_00346798@0x00346798", # 1 ref(s), first at 0x00384B6C
   "ptr_00346A98@0x00346A98", # 5 ref(s), first at 0x00384BEC
   "ptr_00346AA0@0x00346AA0", # 4 ref(s), first at 0x00384BF4
   "ptr_00346AA8@0x00346AA8", # 2 ref(s), first at 0x00384BFC
   "ptr_00346AB0@0x00346AB0", # 3 ref(s), first at 0x00384C04
+  "ptr_00346BB8@0x00346BB8", # 11 ref(s), first at 0x0037ED84
   "ptr_00346BC0@0x00346BC0", # 12 ref(s), first at 0x0037ED8C
   "ptr_00346BC8@0x00346BC8", # 11 ref(s), first at 0x0037EFC4
   "ptr_00346C80@0x00346C80", # 1 ref(s), first at 0x00384C24
@@ -628,7 +970,11 @@ entry_points = [
   "ptr_00347748@0x00347748", # 1 ref(s), first at 0x0037C9D4
   "ptr_00347F80@0x00347F80", # 2 ref(s), first at 0x00384D14
   "ptr_00347FF0@0x00347FF0", # 1 ref(s), first at 0x00384D9C
+  "ptr_00348038@0x00348038", # 1 ref(s), first at 0x00384D54
+  "ptr_00348048@0x00348048", # 1 ref(s), first at 0x00384D7C
   "ptr_00348080@0x00348080", # 1 ref(s), first at 0x00384D0C
+  "ptr_00348090@0x00348090", # 1 ref(s), first at 0x00384D34
+  "ptr_00348CA0@0x00348CA0", # 1 ref(s), first at 0x00384F04
   "ptr_00348CA8@0x00348CA8", # 1 ref(s), first at 0x00384EEC
   "ptr_00348CB0@0x00348CB0", # 1 ref(s), first at 0x00384ED4
   "ptr_00348CB8@0x00348CB8", # 1 ref(s), first at 0x00384EBC

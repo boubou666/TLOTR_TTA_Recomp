@@ -90,6 +90,37 @@ How the port is brought up, every fix and how it was found, and what remains ope
 6. `TTA_MEMTOP=0x1F00000` (fits EA's first malloc under `EndOfHeap`) gives the same heap size and the same failures:
    not the size. The arena dump looks sane (bins self-linked, top = region base + 0x20, region node linked).
 
+7. Boot 9 (a copy of the generated 0x24F780 with prints, `runtime/tta_probe_dlmalloc.cpp`): at the first malloc the top
+   chunk's size is 0, though it was 0x1AB2FD1 right after setup. The runtime's own guest heap (`guestMalloc`, for HLE
+   stubs) starts at the SetupHeap base 0x448E10, inside the span TTA's sbrk hands to EA: the HLE `sceGsResetGraph`
+   builds its 128-byte GIF packet there and the high word of DISPFB lands on the top chunk's size field. Fork 2d2ae00
+   (local): `PS2Runtime::pinGuestHeap`, used by `applyTta` to put the runtime's heap in the 1 MB under the reserved
+   area (EndOfHeap then returns 0x1E00000), and SIF command packets from a reserved pool.
+8. Boot 11 (pinned heap): EA's heap holds 0x19B31F0 bytes (about 25.7 MB) and its allocations succeed. The boot
+   stops at `JALR 0x119DEC -> 0x12B8D0`, a leaf behind alignment nops that the `jr ra` rule missed: the script now
+   steps over them (246 more entry points).
+9. Boot 12 stops at `JALR 0x1C75CC -> 0x1C62C0`, in code Ghidra never disassembled (317 such gaps, about 39 KB). The
+   script now also takes, given `tta_functions.csv`, every pointer target outside all Ghidra functions; the
+   recompiler runs such an entry up to the next known function (98 more, 841 in all).
+10. Boot 13: first pictures. A ring of particles turns with a garbled line of text (the loading screen), double
+   buffered, for the whole run. Once, in a handler on the invocation stack (sp 0x1FFFFF0), `JALR 0x126434 -> 0`:
+   0x125FA8 calls a method of the object at 0x3A1728, which 0x1552C0 (state machine, 0x1C2EA8) only sets later.
+   The game's VSync handler 0x212638 runs with its hook (0x3F6E54) still 0, so it is not that one.
+   `TTA_TRACE_CALLS=1` logs the first calls of the functions around it.
+11. Boot 15 (missing-target log with the thread and invocation): `thread=1 invocation=HleCall`. The fork's HLE
+   `sceIpuInit` ran guest code at a fixed 0x126428, another game's copy of libipu's static `SetD4_CHCR(1)`; in TTA
+   that address is inside 0x125FA8. The helper only writes D4_CHCR = 1 with DMA suspended, so the stub now does that
+   (fork ebc558a, with the pinned heap and the log). Boot 16: no missing target left; the loading screen still turns.
+   The main state machine (0x1C29C8, byte state at 0x3BA700, table at 0x35FC98 of {enter, update, exit, next})
+   sits in state 3 (enter 0x1C3DD8, update 0x1C41F0, which runs the per-frame updates of 0x1C4018), and no file
+   is read: the game's libcdvd (0x27C808-0x27EA18) is mostly unnamed recompiled code.
+12. Boot 17 (fork ebc558a, `PS2X_STATE_DUMP=15 PS2X_CALL_TRACE=1 PS2X_WATCH=0x3BA700`): same picture. The state
+   stays 3; the EE thread waits on vsync in the frame swap (0x2124B0); the only SIF RPC is the pad library's
+   (sid 0x80001300, call 0x8000131A, every frame); `sceSifSendCmd` runs about 2900 times a second (EA's sound
+   commands to AUDIOPF); no libcdvd or `sceOpen` call at all, so the game has not started loading anything.
+
 ## Open
 
-- Why EA's dlmalloc fails every request: dump the top chunk header (boot 7), then step through 0x24F780.
+- Why the loading screen never ends: what state 3 waits for, and whether the game's disc reads reach the runtime.
+- The text on the loading screen is garbled (font texture or CLUT upload).
+- HLE `sceGsExecLoadImage` copies the whole image into a guest packet: images over ~1 MB would not fit the pinned heap.
