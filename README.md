@@ -75,7 +75,7 @@ shared with the *Twisted Metal: Black*, *Valkyrie Profile 2* and *Drakengard* re
 - Windows 10/11 with [MSYS2](https://www.msys2.org/) (UCRT64), Linux, or macOS
 - CMake 3.21+, Ninja, GCC 13+ or Clang with C++20
 - FFmpeg development libraries (`libavcodec`, `libavformat`, `libavutil`, `libswresample`, `libswscale`) and `pkg-config`
-- `bsdtar` (libarchive) to extract the disc, `rsync`
+- `bsdtar` (libarchive) to extract the disc, Python 3
 - To regenerate the function map: [Ghidra](https://ghidra-sre.org/) 12 with the
   [Emotion Engine extension](https://github.com/chaoticgd/ghidra-emotionengine-reloaded) and a JDK 21
 - A CPU with AVX2 (the runtime is built for `x86-64-v3`)
@@ -99,7 +99,7 @@ scripts/run.sh                                           # ps2EntryRunner game/S
 The same scripts run in an MSYS2 **UCRT64** shell, with MSYS2's GCC (MSVC is not supported for this port).
 
 ```bash
-pacman -S --needed mingw-w64-ucrt-x86_64-{gcc,cmake,ninja,pkgconf,ffmpeg,libarchive,python} git rsync
+pacman -S --needed mingw-w64-ucrt-x86_64-{gcc,cmake,ninja,pkgconf,ffmpeg,libarchive,python} git
 ```
 
 `scripts/stage_dlls.sh` copies the DLLs the runner needs next to `ps2EntryRunner.exe`, so it can also be started

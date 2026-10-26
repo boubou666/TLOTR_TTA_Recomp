@@ -5,4 +5,4 @@ source "$(dirname "$0")/common.sh"
 BUILD_TYPE="${1:-RelWithDebInfo}"
 [ -f "$GENERATED/register_functions.cpp" ] || { echo "no generated code, run scripts/recomp.sh first"; exit 1; }
 cmake -S "$ROOT" -B "$GAME_BUILD" -G Ninja -DCMAKE_BUILD_TYPE="$BUILD_TYPE"
-cmake --build "$GAME_BUILD" --target ps2EntryRunner -j "$JOBS"
+cmake --build "$GAME_BUILD" --target tta_runner -j "$JOBS"
