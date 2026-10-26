@@ -1,0 +1,43 @@
+# Game data (copyrighted, never commit)
+*.iso
+*.ISO
+*.bin
+*.BIN
+*.cue
+iso_extract/
+game/
+*.elf
+*.ELF
+SCES_*
+SCUS_*
+SLES_*
+SLUS_*
+*.IRX
+*.irx
+*.IMG
+
+# PS2Recomp is a git submodule; local build trees live here
+build/
+out/
+cmake-build-*/
+
+# Generated recompiled C++ (derived from the game binary; regenerate with scripts/recomp.sh)
+generated/
+
+# Editor / OS noise
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Personal Claude Code settings
+.claude/settings.local.json
+
+# Runtime logs
+ps2_log.txt
+
+# Debug UI layout the runtime writes in the working directory
+imgui.ini
+
+# Ghidra project and export scratch (scripts/ghidra.sh); the function map itself is committed
+recomp/ghidra/*.toml
