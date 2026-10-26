@@ -41,3 +41,6 @@ imgui.ini
 
 # Ghidra project and export scratch (scripts/ghidra.sh); the function map itself is committed
 recomp/ghidra/*.toml
+
+# c2c room exchange notes: other ports' messages and local paths, kept local
+docs/c2c_exchange.md
