@@ -265,6 +265,10 @@ namespace
     void applyTta(PS2Runtime &runtime)
     {
         requestExactVu1Flags();
+        // paraLLEl-GS by default (PS2X_GS_RENDERER still overrides it): the CPU rasterizer draws TTA's movie
+        // frames as solid magenta, its fallback colour for a texture it cannot sample.
+        if (runtime.gsForPresentation().requestParallelRenderer())
+            std::cout << "[tta] GS renderer: paraLLEl-GS" << std::endl;
         runtime.pinGuestHeap(PS2Runtime::reservedMemoryBase() - kRuntimeHeapBytes, PS2Runtime::reservedMemoryBase());
         if (std::getenv("TTA_TRACE_ALLOC"))
         {

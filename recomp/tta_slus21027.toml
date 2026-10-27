@@ -72,7 +72,8 @@ stubs = [
   "sceCdInit@0x0027DD08",
   "sceCdMmode@0x0027DFF0",
   "sceCdReadClock@0x0027E0C0",
-  "sceMpegInit@0x0027EA40",
+  # sceMpegInit (0x0027EA40) is left to the game: TTA calls it mid-movie, from its sceMpegCbNodata callback
+  # when its packet queue is empty, to reset the IPU; the HLE stub dropped every stream and callback.
   "sceMpegCreate@0x0027EAF0",
   "sceMpegAddBs@0x0027ED08",
   "sceMpegGetPicture@0x0027ED48",

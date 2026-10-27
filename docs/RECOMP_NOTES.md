@@ -139,10 +139,23 @@ How the port is brought up, every fix and how it was found, and what remains ope
    `PS2X_VU1_EXACT_FLAGS=1` with AOT on does the same, so the AOT observer analysis misses one of TTA's MAC/status
    flag readers and skips flags it needs (reported to sc3-port). `applyTta` sets PS2X_VU1_EXACT_FLAGS=1 until then.
    After the memory card check the screen goes black (no movie call, no further disc read).
+16. Boots 42-52: after the memory card check the save manager waited forever in `kState_STALL_FOR_UI`: its timer
+   (0x1BE428) reads COP0 Count, which the runtime never advanced. Fork branch `tlotr/cop0-count`: Count and the
+   performance counters (TTA reads `$25` 432 times) run with the EE cycle clock. Then the legal screen shows, and
+   the boot movies start: TTA feeds `sceMpegAddBs` only from its `sceMpegCbNodata` callback, which the HLE never
+   called, and real `sceMpegAddBs` sends `((size + 19) >> 4) << 4` bytes (TTA passes 0xFB0 for 0xFC0-byte blocks).
+   Fork branch `tlotr/mpeg-nodata` fixes both. The CPU GS rasterizer draws the movie frames as solid magenta;
+   paraLLEl-GS shows them (EA GAMES logo, New Line), so `applyTta` requests paraLLEl-GS. After about 30 movie frames
+   the game calls `sceMpegInit` (0x27EA40) from the Nodata callback when its packet queue runs dry, to reset the IPU;
+   the HLE stub wipes every stream and callback, so the TOML now leaves `sceMpegInit` to the game's code. Built,
+   not booted yet (paused 2026-10-27 12:32).
 
 ## Open
 
-- The black screen after the memory card check (the save manager's state, memory card emulation).
+- Boot with `sceMpegInit` left to the game: do the movies play to the end and the title screen follow?
+- The CPU GS rasterizer's magenta movie frames (unsupported texture path).
+- Review/merge of the fork branches tlotr/cop0-count and tlotr/mpeg-nodata (TMB check queued); the submodule
+  points at the local merge `tlotr/integration` meanwhile.
 - VU1 AOT flag observer: which TTA microprogram reads a flag the analysis treats as unread (sc3-port).
 - The text on the loading screen is garbled (font texture or CLUT upload).
 - HLE `sceGsExecLoadImage` copies the whole image into a guest packet: images over ~1 MB would not fit the pinned heap.
