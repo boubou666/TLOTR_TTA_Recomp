@@ -132,9 +132,17 @@ How the port is brought up, every fix and how it was found, and what remains ope
    display buffer have every Y at 0x7FFF and X at the guard band (1535.9/2559.9): their vertices are projected
    off screen. They are built on the EE (0x218FB8 and 0x218910: FPU and VU0 macro code through the scratchpad).
    `PS2X_VU0_CHECK=1` finds no compiled/interpreted VU0 difference.
+15. Boots 33-41: the strips came from VU1 (XGKICK of an AOT-compiled microprogram), not from the EE. The EE side
+   checks out: the mesh renderer 0x2C9A08 multiplies its matrices with the VU0 microprogram at 0xA80 (probe: the
+   product is exact) and 0x218FB8 only draws a full-screen quad. With `PS2X_VU_AOT=0` (VU1 interpreter) the loading
+   screen shows the One Ring with its inscription and a readable line of text, then the memory card check box;
+   `PS2X_VU1_EXACT_FLAGS=1` with AOT on does the same, so the AOT observer analysis misses one of TTA's MAC/status
+   flag readers and skips flags it needs (reported to sc3-port). `applyTta` sets PS2X_VU1_EXACT_FLAGS=1 until then.
+   After the memory card check the screen goes black (no movie call, no further disc read).
 
 ## Open
 
-- The dark screen: why the EE-built strips are projected off screen (camera/matrix data, FPU or VU0 macro code).
+- The black screen after the memory card check (the save manager's state, memory card emulation).
+- VU1 AOT flag observer: which TTA microprogram reads a flag the analysis treats as unread (sc3-port).
 - The text on the loading screen is garbled (font texture or CLUT upload).
 - HLE `sceGsExecLoadImage` copies the whole image into a guest packet: images over ~1 MB would not fit the pinned heap.

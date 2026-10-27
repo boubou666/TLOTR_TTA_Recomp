@@ -6,6 +6,7 @@
 
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <iostream>
 #include <string>
 
@@ -145,24 +146,99 @@ namespace
                       << getRegU32(ctx, 2) << " limit=0x" << runtime->guestHeapLimit() << std::dec << std::endl;
     }
 
-    // TTA_TRACE_CALLS=1 (bring-up aid): the first calls of a few functions with their caller, stack and arguments.
-    // 0x125FA8 (reached through 0x125C90's vtable slot) calls a method of the object at 0x3A1728, which 0x1552C0
-    // only sets later in the boot; 0x212638 is the game's sceGsSyncVCallback handler.
-    constexpr uint32_t kTracedObject = 0x003A1728u;
-    constexpr uint32_t kVSyncHook = 0x003F6E54u; // called by 0x212638 when set
-
+    // TTA_TRACE_CALLS=1 (bring-up aid): the first calls of a few functions with their caller, arguments and result.
+    // The loading screen: 0x1C39E8 shows it (0x1C0FA8 sets the byte at 0x3E9C68), loads through 0x1D66D8 and
+    // 0x1DA420, and only hides it (0x1C0FF0) when both succeed.
     template <uint32_t Address, void (*Function)(uint8_t *, R5900Context *, PS2Runtime *)>
     void callTrace(uint8_t *rdram, R5900Context *ctx, PS2Runtime *runtime)
     {
-        static uint32_t s_calls = 0, s_hook = 0;
-        const uint32_t hook = rd32(rdram, kVSyncHook);
-        const bool hookChanged = hook != s_hook;
-        s_hook = hook;
-        if (s_calls++ < 4u || hookChanged)
-            std::fprintf(stderr, "[tta:call] 0x%x #%u ra=0x%x sp=0x%x a0=0x%x a1=0x%x [0x3a1728]=0x%x [0x3f6e54]=0x%x\n", Address,
-                         s_calls, getRegU32(ctx, 31), getRegU32(ctx, 29), getRegU32(ctx, 4), getRegU32(ctx, 5),
-                         rd32(rdram, kTracedObject), rd32(rdram, kVSyncHook));
+        static uint32_t s_calls = 0;
+        const uint32_t n = ++s_calls, ra = getRegU32(ctx, 31), a0 = getRegU32(ctx, 4), a1 = getRegU32(ctx, 5);
         Function(rdram, ctx, runtime);
+        if (n <= 16u)
+            std::fprintf(stderr, "[tta:call] 0x%x #%u ra=0x%x a0=0x%x a1=0x%x -> 0x%x\n", Address, n, ra, a0, a1,
+                         getRegU32(ctx, 2));
+    }
+
+    // TTA_TRACE_STRIPS=1 (bring-up aid): 0x218FB8 turns vertices in the scratchpad into GIF strips (STQ, RGBA,
+    // XYZF2). After the loading screen every strip it draws lands off screen; log its arguments, the render
+    // record at [0x36F870] and the scratchpad it reads, every 600th call.
+    constexpr uint32_t kRenderRecord = 0x0036F870u;
+
+    void dumpFloats(const char *label, const uint8_t *base, uint32_t bytes)
+    {
+        std::fprintf(stderr, "[tta:strip] %s:", label);
+        for (uint32_t offset = 0; offset < bytes; offset += 4u)
+        {
+            float value;
+            std::memcpy(&value, base + offset, sizeof(value));
+            std::fprintf(stderr, "%s%g", (offset % 16u) ? " " : (offset ? " | " : " "), value);
+        }
+        std::fprintf(stderr, "\n");
+    }
+
+    // 0x2C9A08 (mesh renderer, the strips' caller) multiplies the matrices at 0x418A40 and 0x418A80 with the VU0
+    // microprogram at 0xA80 (VCALLMS) and transforms its vertices with the product.
+    void meshTrace(uint8_t *rdram, R5900Context *ctx, PS2Runtime *runtime)
+    {
+        static uint32_t s_calls = 0;
+        if ((s_calls++ % 600u) == 0u && s_calls < 600u * 6u)
+        {
+            const uint8_t *code = runtime->memory().getVU0Code();
+            std::fprintf(stderr, "[tta:mesh] #%u vu0 code generation %llu, microprogram 0xA80:", s_calls,
+                         static_cast<unsigned long long>(runtime->memory().getVU0CodeGeneration()));
+            for (uint32_t offset = 0; code && offset < 0x40u; offset += 4u)
+            {
+                uint32_t word;
+                std::memcpy(&word, code + 0xA80u + offset, sizeof(word));
+                std::fprintf(stderr, " %08x", word);
+            }
+            std::fprintf(stderr, "\n");
+            dumpFloats("matrix 0x418A40", rdram + 0x418A40u, 0x40u);
+            dumpFloats("matrix 0x418A80", rdram + 0x418A80u, 0x40u);
+            // Run the same VCALLMS on a copy of the context: vf9-vf12 should be the rows of 0x418A40 times
+            // the matrix at 0x418A80.
+            R5900Context probe = *ctx;
+            for (int row = 0; row < 4; ++row)
+            {
+                std::memcpy(&probe.vu0_vf[1 + row], rdram + 0x418A40u + row * 16u, 16u);
+                std::memcpy(&probe.vu0_vf[5 + row], rdram + 0x418A80u + row * 16u, 16u);
+            }
+            runtime->vu0StartMicroProgram(rdram, &probe, 0xA80u);
+            float product[16];
+            for (int row = 0; row < 4; ++row)
+                std::memcpy(product + row * 4, &probe.vu0_vf[9 + row], 16u);
+            dumpFloats("vu0 product", reinterpret_cast<const uint8_t *>(product), 0x40u);
+            float a[16], b[16], expected[16] = {};
+            std::memcpy(a, rdram + 0x418A40u, sizeof(a));
+            std::memcpy(b, rdram + 0x418A80u, sizeof(b));
+            for (int row = 0; row < 4; ++row)
+                for (int col = 0; col < 4; ++col)
+                    for (int k = 0; k < 4; ++k)
+                        expected[row * 4 + col] += a[row * 4 + k] * b[k * 4 + col];
+            dumpFloats("expected", reinterpret_cast<const uint8_t *>(expected), 0x40u);
+        }
+        FUN_002c9a08_0x2c9a08(rdram, ctx, runtime);
+    }
+
+    void stripTrace(uint8_t *rdram, R5900Context *ctx, PS2Runtime *runtime)
+    {
+        static uint32_t s_calls = 0;
+        if ((s_calls++ % 600u) == 0u && s_calls < 600u * 12u)
+        {
+            const uint32_t record = rd32(rdram, kRenderRecord);
+            std::fprintf(stderr, "[tta:strip] #%u ra=0x%x a0=0x%x a1=0x%x a2=0x%x a3=0x%x t0=0x%x t1=0x%x record=0x%x mode=%u\n",
+                         s_calls, getRegU32(ctx, 31), getRegU32(ctx, 4), getRegU32(ctx, 5), getRegU32(ctx, 6),
+                         getRegU32(ctx, 7), getRegU32(ctx, 8), getRegU32(ctx, 9), record,
+                         rdram[(record + 0x90u) & 0x1FFFFFFu]);
+            dumpFloats("record+0x40", rdram + ((record + 0x40u) & 0x1FFFFF0u), 0x40u);
+            if (const uint8_t *scratchpad = ps2GetScratchpadHostPtr())
+                dumpFloats("spr", scratchpad, 0x80u);
+            // a1: the transformed vertices (x, y, z, w per qword), t0: the second array (colours/UVs).
+            dumpFloats("a1 vertices", rdram + (getRegU32(ctx, 5) & 0x1FFFFF0u), 0x80u);
+            dumpFloats("t0 array", rdram + (getRegU32(ctx, 8) & 0x1FFFFF0u), 0x40u);
+        }
+        FUN_00218fb8_0x218fb8(rdram, ctx, runtime);
     }
 
     // TTA's newlib sbrk (0x328C30) owns guest RAM from the end of its BSS (0x448E10) up to EndOfHeap, and EA carves
@@ -172,8 +248,23 @@ namespace
     // to the 1 MB under its reserved area instead, and the game's sbrk stops there.
     constexpr uint32_t kRuntimeHeapBytes = 0x00100000u;
 
+    // TTA's VU1 strips come out as garbage when the AOT-compiled microprograms skip the MAC/status flags their
+    // observer analysis believes unread (raw floats in STQ, Y at 0x7FFF): one of TTA's flag readers is missed.
+    // Until the analysis sees it, the game computes every flag (PS2X_VU1_EXACT_FLAGS, read once on first use).
+    void requestExactVu1Flags()
+    {
+        if (std::getenv("PS2X_VU1_EXACT_FLAGS"))
+            return;
+#ifdef _WIN32
+        _putenv("PS2X_VU1_EXACT_FLAGS=1");
+#else
+        setenv("PS2X_VU1_EXACT_FLAGS", "1", 0);
+#endif
+    }
+
     void applyTta(PS2Runtime &runtime)
     {
+        requestExactVu1Flags();
         runtime.pinGuestHeap(PS2Runtime::reservedMemoryBase() - kRuntimeHeapBytes, PS2Runtime::reservedMemoryBase());
         if (std::getenv("TTA_TRACE_ALLOC"))
         {
@@ -191,10 +282,21 @@ namespace
         }
         if (std::getenv("TTA_TRACE_CALLS"))
         {
-            runtime.registerFunction(0x00125C90u, &callTrace<0x125C90u, FUN_00125c90_0x125c90>);
-            runtime.registerFunction(0x00125FA8u, &callTrace<0x125FA8u, FUN_00125fa8_0x125fa8>);
-            runtime.registerFunction(0x001552C0u, &callTrace<0x1552C0u, FUN_001552c0_0x1552c0>);
-            runtime.registerFunction(0x00212638u, &callTrace<0x212638u, FUN_00212638_0x212638>);
+            runtime.registerFunction(0x001C39E8u, &callTrace<0x1C39E8u, FUN_001c39e8_0x1c39e8>);
+            runtime.registerFunction(0x001C0FA8u, &callTrace<0x1C0FA8u, FUN_001c0fa8_0x1c0fa8>);
+            runtime.registerFunction(0x001C0FF0u, &callTrace<0x1C0FF0u, FUN_001c0ff0_0x1c0ff0>);
+            runtime.registerFunction(0x001D66D8u, &callTrace<0x1D66D8u, FUN_001d66d8_0x1d66d8>);
+            runtime.registerFunction(0x001D6880u, &callTrace<0x1D6880u, FUN_001d6880_0x1d6880>);
+            runtime.registerFunction(0x001DA420u, &callTrace<0x1DA420u, FUN_001da420_0x1da420>);
+            // GameDataStorage (save manager, object 0x3A2300): SetState (a1 = state) and the vtable 0xA4 check
+            // 0x1C39E8 makes before hiding the loading screen.
+            runtime.registerFunction(0x0019A6C0u, &callTrace<0x19A6C0u, FUN_0019a6c0_0x19a6c0>);
+            runtime.registerFunction(0x00333F60u, &callTrace<0x333F60u, entry_333f60_0x333fb8>);
+        }
+        if (std::getenv("TTA_TRACE_STRIPS"))
+        {
+            runtime.registerFunction(0x00218FB8u, &stripTrace);
+            runtime.registerFunction(0x002C9A08u, &meshTrace);
         }
         std::cout << "[tta] The Third Age (NTSC-U SLUS-21027) overrides applied" << std::endl;
     }

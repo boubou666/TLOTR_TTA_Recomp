@@ -32,9 +32,12 @@ wait_free() {
 case "${1:-status}" in
     wait) wait_free ;;
     take)
+        # The fork's shared tool queues waiters in arrival order (PS2Recomp/tools/bench_lock.sh).
         minutes="${2:?minutes}"; purpose="${3:?purpose}"
-        wait_free
-        echo "$NAME until $(date -d "+$minutes min" +%H:%M) ($purpose)" > "$LOCK"
+        export PS2X_BENCH_LOCK="$LOCK"
+        PS2X_BENCH_LOCK_ANNOUNCE="${PS2X_BENCH_LOCK_ANNOUNCE:-}"  # the tool reads it unguarded (set -u here)
+        . <(tr -d "$(printf '\r')" < "$ROOT/PS2Recomp/tools/bench_lock.sh")  # Windows checkouts may carry CRLF
+        bench_lock_take "$NAME" "$minutes" "$purpose"
         echo "took: $(cat "$LOCK")" ;;
     release)
         if grep -q "^$NAME " "$LOCK" 2>/dev/null; then : > "$LOCK"; echo "released"; else echo "not ours: $(cat "$LOCK" 2>/dev/null)"; fi ;;

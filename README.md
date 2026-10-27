@@ -29,7 +29,8 @@ Not an emulator: the game's own MIPS R5900 code, rebuilt as a native program on 
 | Map the stripped main ELF (Ghidra function map, SDK functions from the fork's signature database) | ✅ |
 | Recompile it and link the generated code with the PS2Recomp runtime (Windows) | ✅ |
 | Boot: EE kernel, the game's own IOP modules, EA's heap, first frames on screen | ✅ |
-| Loading: CD reads from the disc files | 🔧 |
+| Loading: CD reads from the disc files | ✅ |
+| Memory card check, title screen | 🔧 |
 | Movies, title screen, menus | ⏳ |
 | First battle | ⏳ |
 | Sound and music | ⏳ |
@@ -45,12 +46,24 @@ what remains open.
 ## Screenshots
 
 <p align="center">
-  <img src="docs/screenshots/2026-10-26-loading-screen.png" width="480" alt="The game's loading screen: a ring of particles with a garbled line of text">
+  <img src="docs/screenshots/2026-10-27-loading-screen.png" width="400" alt="The loading screen: the One Ring with its glowing inscription and an Elvish-style line of text">
+  <img src="docs/screenshots/2026-10-27-memory-card-check.png" width="400" alt="A message box: Checking memory card (PS2) in MEMORY CARD slot 1">
 </p>
 
-**First frames, 2026-10-26.** The game's loading screen, drawn by the recompiled code: the ring turns, double
-buffered. It does not get further yet. The line of text is garbled, and the white band on the right is outside
-the 516-pixel-wide area the game draws in this build.
+**2026-10-27.** The loading screen and the memory card check, drawn by the recompiled code. The disc is read
+through the game's own IOP sound and streaming module, and the VU1 microprograms run AOT-compiled (with exact
+MAC/status flags for now). The white band on the right is outside the 516-pixel-wide area the game draws in this
+build. It does not reach the title screen yet.
+
+<details>
+<summary>2026-10-26: first frames</summary>
+
+<p align="center">
+  <img src="docs/screenshots/2026-10-26-loading-screen.png" width="400" alt="The loading screen with a garbled line of text">
+</p>
+
+The ring of the loading screen turned, but its text was garbled and the game never read the disc.
+</details>
 
 ## Goal
 
