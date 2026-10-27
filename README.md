@@ -26,9 +26,10 @@ Not an emulator: the game's own MIPS R5900 code, rebuilt as a native program on 
 
 | Milestone | |
 |---|:---:|
-| Map the stripped main ELF (Ghidra function map, SDK functions from the fork's signature database) | 🔧 |
-| Recompile it and link the generated code with the PS2Recomp runtime (Windows) | ⏳ |
-| Boot: EE kernel, the game's own IOP modules, CD reads from the disc files | ⏳ |
+| Map the stripped main ELF (Ghidra function map, SDK functions from the fork's signature database) | ✅ |
+| Recompile it and link the generated code with the PS2Recomp runtime (Windows) | ✅ |
+| Boot: EE kernel, the game's own IOP modules, EA's heap, first frames on screen | ✅ |
+| Loading: CD reads from the disc files | 🔧 |
 | Movies, title screen, menus | ⏳ |
 | First battle | ⏳ |
 | Sound and music | ⏳ |
@@ -40,6 +41,16 @@ Not an emulator: the game's own MIPS R5900 code, rebuilt as a native program on 
 
 [docs/RECOMP_NOTES.md](docs/RECOMP_NOTES.md) records how the port is brought up, every fix and how it was found, and
 what remains open.
+
+## Screenshots
+
+<p align="center">
+  <img src="docs/screenshots/2026-10-26-loading-screen.png" width="480" alt="The game's loading screen: a ring of particles with a garbled line of text">
+</p>
+
+**First frames, 2026-10-26.** The game's loading screen, drawn by the recompiled code: the ring turns, double
+buffered. It does not get further yet. The line of text is garbled, and the white band on the right is outside
+the 516-pixel-wide area the game draws in this build.
 
 ## Goal
 
