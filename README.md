@@ -30,8 +30,9 @@ Not an emulator: the game's own MIPS R5900 code, rebuilt as a native program on 
 | Recompile it and link the generated code with the PS2Recomp runtime (Windows) | ✅ |
 | Boot: EE kernel, the game's own IOP modules, EA's heap, first frames on screen | ✅ |
 | Loading: CD reads from the disc files | ✅ |
-| Memory card check, title screen | 🔧 |
-| Movies, title screen, menus | ⏳ |
+| Memory card check, legal screen | ✅ |
+| Movies, title screen | 🔧 |
+| Menus | ⏳ |
 | First battle | ⏳ |
 | Sound and music | ⏳ |
 | Memory card | ⏳ |
@@ -48,9 +49,12 @@ what remains open.
 <p align="center">
   <img src="docs/screenshots/2026-10-27-loading-screen.png" width="400" alt="The loading screen: the One Ring with its glowing inscription and an Elvish-style line of text">
   <img src="docs/screenshots/2026-10-27-memory-card-check.png" width="400" alt="A message box: Checking memory card (PS2) in MEMORY CARD slot 1">
+  <img src="docs/screenshots/2026-10-27-legal-screen.png" width="400" alt="The Lord of the Rings: The Third Age logo above the copyright notice">
+  <img src="docs/screenshots/2026-10-27-ea-games-movie.png" width="400" alt="The EA GAMES Challenge Everything boot movie">
 </p>
 
-**2026-10-27.** The loading screen and the memory card check, drawn by the recompiled code. The disc is read
+**2026-10-27.** The loading screen, the memory card check, the legal screen and the first boot movie, drawn by the
+recompiled code. The disc is read
 through the game's own IOP sound and streaming module, and the VU1 microprograms run AOT-compiled (with exact
 MAC/status flags for now). The white band on the right is outside the 516-pixel-wide area the game draws in this
 build. It does not reach the title screen yet.
