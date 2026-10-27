@@ -118,9 +118,23 @@ How the port is brought up, every fix and how it was found, and what remains ope
    stays 3; the EE thread waits on vsync in the frame swap (0x2124B0); the only SIF RPC is the pad library's
    (sid 0x80001300, call 0x8000131A, every frame); `sceSifSendCmd` runs about 2900 times a second (EA's sound
    commands to AUDIOPF); no libcdvd or `sceOpen` call at all, so the game has not started loading anything.
+13. The loading screen is EA's UStream (`SPECIF/UStream.c`, request queue 0x3F2A48, wait loop 0x1D6880 drawing
+   frames through its callback). Its requests go to EA's AUDIOPF.IRX by SIF commands (IOP handlers 0x627FC/0x6282C
+   wake a worker that answers with SIF command 0 to the EE handler 0x226B60). AUDIOPF builds each disc path with
+   sysclib `sprintf("\%s\%s.%s;1", dir, name, ext)`; the IOP's sprintf copied the format literally, so every
+   `sceCdSearchFile` failed (256 tries per file, 144 files). Fork ef79b6a formats the varargs (and logs a missed
+   search once per name). Boot 25: the files are found and read, the loading screen ends.
+14. Boots 26-32: a dark screen follows, the same in every frame, with the CPU and the paraLLEl-GS renderer alike.
+   The game is not stuck: the main loop runs every frame (frame limiter 0x1C36C8 spins on the vsync counter
+   0x3F65B4), VU1 runs 16k microprograms per dump, the pad works (SIO2 trace: DS2U_D sets the DualShock 2 in
+   pressure mode and polls it) and scripted START/CROSS presses change nothing. A GS dump (`PS2X_GS_DUMP_AT`)
+   shows full-screen 8x8 sprite passes into the off-screen buffers 256 and 384, and the 3D strips drawn to the
+   display buffer have every Y at 0x7FFF and X at the guard band (1535.9/2559.9): their vertices are projected
+   off screen. They are built on the EE (0x218FB8 and 0x218910: FPU and VU0 macro code through the scratchpad).
+   `PS2X_VU0_CHECK=1` finds no compiled/interpreted VU0 difference.
 
 ## Open
 
-- Why the loading screen never ends: what state 3 waits for, and whether the game's disc reads reach the runtime.
+- The dark screen: why the EE-built strips are projected off screen (camera/matrix data, FPU or VU0 macro code).
 - The text on the loading screen is garbled (font texture or CLUT upload).
 - HLE `sceGsExecLoadImage` copies the whole image into a guest packet: images over ~1 MB would not fit the pinned heap.

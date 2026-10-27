@@ -25,7 +25,7 @@ wait_free() {
     local said=""
     while held || game_running; do
         [ -n "$said" ] || { echo "bench lock busy: $(cat "$LOCK" 2>/dev/null | tr -d '\r')"; said=1; }
-        sleep 30
+        sleep 3
     done
 }
 
