@@ -60,6 +60,22 @@ How the port is brought up, every fix and how it was found, and what remains ope
   - Fork 281f7d9: generated sources declare only the functions they call by name (84 files of 48,810) instead of
     including the 4.2 MB `ps2_recompiled_functions.h`, so new entry points or stubs rebuild only the changed files.
     An edit to a runtime header still rebuilds all the generated code.
+  - Fork 373bc18 (VP2S, on main as 3c04393): generated code includes only `ps2_runtime_macros.h` and
+    `ps2_recomp_calls.h` (over `ps2_recomp_abi.h`), not `ps2_runtime.h`. The fork's `ps2EntryRunner` PCH still listed
+    `ps2_runtime.h`, `ps2_syscalls.h` and `ps2_stubs.h`, so on TTA (and JC2) a runtime header edit still rebuilt every
+    generated file; fork branch `tlotr/runner-pch` makes the runner PCH those two light headers.
+- What VP2S does for its build (VP2S_Recomp `port/CMakeLists.txt`, 2026-10-28, a runtime header edit ~20 s instead of
+  13-15 min), for TTA to take up:
+  - PCH = the two light headers above.
+  - `UNITY_BUILD_MODE GROUP`, groups by guest address (`VP2S_UNITY_RANGE_SHIFT` 13: 8 KiB of guest code per group,
+    ~470 groups): one changed function rebuilds one group, a new file shifts no other batch. TTA still uses the fork's
+    BATCH mode (32 files in name order).
+  - Generated code at `/O2 /Ob1` (MSVC); runtime `/GL`, link `/LTCG:INCREMENTAL /CGTHREADS:16 /OPT:REF /OPT:ICF
+    /INCREMENTAL:NO` (relink ~2.5 min to seconds). TTA builds with MinGW GCC, which has no incremental LTO link.
+  - VU1 AOT fragments in their own target and job pool, unity off (TTA does this too). No ccache.
+  - Pitfalls: never switch branches in the build tree (a checkout rewrites header mtimes: full rebuild; build from a
+    worktree and check out commits by hash), a PUBLIC compile definition on `ps2_runtime` forces a full rebuild, and a
+    `file(GLOB)` of module directories needs `CONFIGURE_DEPENDS`.
 
 ## Boot
 
@@ -147,15 +163,33 @@ How the port is brought up, every fix and how it was found, and what remains ope
    Fork branch `tlotr/mpeg-nodata` fixes both. The CPU GS rasterizer draws the movie frames as solid magenta;
    paraLLEl-GS shows them (EA GAMES logo, New Line), so `applyTta` requests paraLLEl-GS. After about 30 movie frames
    the game calls `sceMpegInit` (0x27EA40) from the Nodata callback when its packet queue runs dry, to reset the IPU;
-   the HLE stub wipes every stream and callback, so the TOML now leaves `sceMpegInit` to the game's code. Built,
-   not booted yet (paused 2026-10-27 12:32).
+   the HLE stub wipes every stream and callback, so the TOML now leaves `sceMpegInit` to the game's code.
+17. Boots 53-54 (2026-10-28, fork main with both branches merged, submodule on `tlotr/native`): EA GAMES and New Line
+   play to the end, then a black screen. The Nodata callback 0x1BE698 takes the next packet from its queue
+   (0x1BE648); when the queue is empty it calls `sceMpegInit` and returns 0, which is how TTA ends a movie. The HLE
+   ignored the result and GetPicture waited forever. Fork `tlotr/mpeg-nodata-end`: a callback that fed nothing and
+   returned 0 ends the input (`inputFinished`, `streamEnded`), the pictures left are shown and `sceMpegIsEnd` reports
+   the end. Boot 54 reaches the title screen (New Game / Load Game / More); the attract movie plays and returns to it.
+   Mind the MPEG HLE's logs: GetPicture's lines stop after 32 on purpose, frame 31 is not where decoding stops.
+
+## Native PC rendering (2026-10-28)
+
+The goal, shared with TMB and VP2S: no PS2 emulation left. Fork `docs/native.md` (on `native/renderer`) has the
+layers. First step for TTA: every VU1 program drawn natively without translating any yet.
+
+- Fork `native/vu1-stream` (written for TTA, TMB and JC2 will use it): `ps2x::native::Vu1StreamAdapter` mirrors VU1
+  memory from every VIF1 stream, runs each microprogram on the fork's `Vu1Sandbox` (its own VU1, whose XGKICK output
+  `GifToNative` draws with the native renderer) or hands it to the port (`Choice::Port`), and owns the VU1 / DIRECT
+  gate decisions. `runtime/tta_native.cpp` installs it with `TTA_NATIVE=1`; the frame ends in the frame swap
+  0x212478; the screen is assumed 640 x 448 centred on 2048 (sceGsSetDefDBuffDc), to check.
+- Next: TTA's main VU1 programs translated one by one into native code (`Choice::Port`), the frame loop on real
+  time, the IOP modules recompiled (`tools/iop_recomp.py`) with sound on the wall clock.
 
 ## Open
 
-- Boot with `sceMpegInit` left to the game: do the movies play to the end and the title screen follow?
 - The CPU GS rasterizer's magenta movie frames (unsupported texture path).
-- Review/merge of the fork branches tlotr/cop0-count and tlotr/mpeg-nodata (TMB check queued); the submodule
-  points at the local merge `tlotr/integration` meanwhile.
+- Fork branches not on main yet: `native/vu1-stream`, `tlotr/mpeg-nodata-end`, `tlotr/runner-pch`; the submodule
+  is on `tlotr/native` (native/renderer + main + those three).
 - VU1 AOT flag observer: which TTA microprogram reads a flag the analysis treats as unread (sc3-port).
 - The text on the loading screen is garbled (font texture or CLUT upload).
 - HLE `sceGsExecLoadImage` copies the whole image into a guest packet: images over ~1 MB would not fit the pinned heap.

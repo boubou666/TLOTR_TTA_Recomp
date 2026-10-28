@@ -1,6 +1,7 @@
 // Game-specific runtime setup for The Lord of the Rings: The Third Age (NTSC-U, SLUS-21027).
 
 #include "game_overrides.h"
+#include "tta_native.h"
 #include "ps2_runtime.h"
 #include "ps2_recompiled_functions.h"
 
@@ -270,6 +271,7 @@ namespace
         if (runtime.gsForPresentation().requestParallelRenderer())
             std::cout << "[tta] GS renderer: paraLLEl-GS" << std::endl;
         runtime.pinGuestHeap(PS2Runtime::reservedMemoryBase() - kRuntimeHeapBytes, PS2Runtime::reservedMemoryBase());
+        tta::installNative(runtime);
         if (std::getenv("TTA_TRACE_ALLOC"))
         {
             runtime.registerFunction(kAllocCall, &allocCallTrace);

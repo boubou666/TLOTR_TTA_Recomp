@@ -31,8 +31,9 @@ Not an emulator: the game's own MIPS R5900 code, rebuilt as a native program on 
 | Boot: EE kernel, the game's own IOP modules, EA's heap, first frames on screen | ✅ |
 | Loading: CD reads from the disc files | ✅ |
 | Memory card check, legal screen | ✅ |
-| Movies, title screen | 🔧 |
-| Menus | ⏳ |
+| Movies, title screen | ✅ |
+| Menus | 🔧 |
+| Native PC rendering: every VU1 program drawn by the native renderer, then translated (no PS2 emulation left) | 🔧 |
 | First battle | ⏳ |
 | Sound and music | ⏳ |
 | Memory card | ⏳ |
@@ -47,6 +48,14 @@ what remains open.
 ## Screenshots
 
 <p align="center">
+  <img src="docs/screenshots/2026-10-28-title-screen.png" width="400" alt="The title screen: The Lord of the Rings: The Third Age logo over a dark blue background, with New Game, Load Game and More">
+  <img src="docs/screenshots/2026-10-28-attract-movie.png" width="400" alt="The attract movie: two characters on a forest path at dusk">
+</p>
+
+**2026-10-28.** The title screen, after the EA GAMES and New Line Cinema movies; the attract movie plays and returns
+to it. The movies end the way the game signals it (its no-data callback returns 0), fork `tlotr/mpeg-nodata-end`.
+
+<p align="center">
   <img src="docs/screenshots/2026-10-27-loading-screen.png" width="400" alt="The loading screen: the One Ring with its glowing inscription and an Elvish-style line of text">
   <img src="docs/screenshots/2026-10-27-memory-card-check.png" width="400" alt="A message box: Checking memory card (PS2) in MEMORY CARD slot 1">
   <img src="docs/screenshots/2026-10-27-legal-screen.png" width="400" alt="The Lord of the Rings: The Third Age logo above the copyright notice">
@@ -57,7 +66,7 @@ what remains open.
 recompiled code. The disc is read
 through the game's own IOP sound and streaming module, and the VU1 microprograms run AOT-compiled (with exact
 MAC/status flags for now). The white band on the right is outside the 516-pixel-wide area the game draws in this
-build. It does not reach the title screen yet.
+build.
 
 <details>
 <summary>2026-10-26: first frames</summary>
