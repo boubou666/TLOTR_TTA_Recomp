@@ -33,7 +33,7 @@ Not an emulator: the game's own code (EE, IOP modules, VU microcode) rebuilt as 
 | Movies, title screen | ✅ |
 | New Game, the intro cinematic | ✅ |
 | First battle | ✅ |
-| Battles playable, the first chapter | 🔧 |
+| The first battle played and won; the first chapter | 🔧 |
 | Sound and music (the driver runs; not checked by ear yet) | 🔧 |
 | Saving to the memory card | ⏳ |
 | Linux and macOS builds | ⏳ |
@@ -55,6 +55,14 @@ Not an emulator: the game's own code (EE, IOP modules, VU microcode) rebuilt as 
 what remains open.
 
 ## Screenshots
+
+<p align="center">
+  <img src="docs/screenshots/2026-10-29-black-rider.png" width="400" alt="A Black Rider raising its sword in a misty forest, in-engine">
+  <img src="docs/screenshots/2026-10-29-scene-unlocked.png" width="400" alt="The Scenes menu after the first battle: Nazgul Agenda, scene 2 of 109, unlocked">
+</p>
+
+**2026-10-29.** The first battle played to its end with the Cross button alone (a pad script): the Black Riders'
+cinematic, the scene it unlocks (Nazgul Agenda, 2/109) and the film clip that follows, in one 11-minute run.
 
 <p align="center">
   <img src="docs/screenshots/2026-10-29-first-battle.png" width="400" alt="The first battle: Berethor facing two Black Riders, with the Attack / Taunt Foe / Skip menu, turn portraits and HP">
