@@ -201,6 +201,13 @@ How the port is brought up, every fix and how it was found, and what remains ope
    `applyTta` sets 2700 and 10000 us. Boot 101 (defaults only, three Cross presses) reaches the first battle at ~400 s:
    Berethor against two Black Riders, the battle menu and hint text clean. The game logic has a race the instant
    reads exposed; the drive timing hides it the way the console's drive does.
+20. Frame rate (`TTA_FPS_LOG=1`, boots 103-113): the intro film plays at its encoded 15 fps; in-engine scenes were
+   held at 15 too. TTA's vsync handler (0x212638) stores Count + 16.68 ms (the next vblank's Count) at 0x3F65C8; the
+   frame loop (0x1C37B8) reads it through 0x212628 and spins on MFC0 Count until within 0.17 ms of it, else a whole
+   period: here a spin iteration can outlast that window and every frame lost a vblank or two. `applyTta` now makes
+   0x212628 return the current Count (`TTA_SKIP_VBLANK_SPIN=0` keeps the spin): sceGsSyncV paces the frame, the
+   in-engine cinematic runs at 30 and the battle at ~18.5 (was 14.5), which is now the host's speed. Ruled out:
+   `PS2X_VU1_EXACT_FLAGS` (no change), the EE clock choice (15 either way).
 
 ## Native PC port (2026-10-28 / 29)
 

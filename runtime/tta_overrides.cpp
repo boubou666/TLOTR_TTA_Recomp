@@ -482,15 +482,33 @@ namespace
         using Clock = std::chrono::steady_clock;
         static Clock::time_point s_start = Clock::now();
         static uint32_t s_frames = 0;
+        static double s_inSwap = 0.0; // host seconds spent inside the swap (its vsync wait), the rest is the frame's work
         ++s_frames;
         const double seconds = std::chrono::duration<double>(Clock::now() - s_start).count();
         if (seconds >= 5.0)
         {
-            std::fprintf(stderr, "[tta:fps] %.1f game frames/s over %.1f s%c", s_frames / seconds, seconds, 10);
+            std::fprintf(stderr, "[tta:fps] %.1f game frames/s over %.1f s, %.1f ms of work and %.1f ms in the swap per frame%c",
+                         s_frames / seconds, seconds, (seconds - s_inSwap) * 1000.0 / s_frames, s_inSwap * 1000.0 / s_frames, 10);
             s_frames = 0;
+            s_inSwap = 0.0;
             s_start = Clock::now();
         }
+        const Clock::time_point before = Clock::now();
         FUN_00212478_0x212478(rdram, ctx, runtime);
+        s_inSwap += std::chrono::duration<double>(Clock::now() - before).count();
+    }
+
+    // TTA's vsync handler (0x212638) stores Count + 16.68 ms, the next vblank's expected Count, at 0x3F65C8; its frame
+    // loop (0x1C37B8, also 0x1C0170) reads it through 0x212628 and spins on MFC0 Count until it is within 0.17 ms of it
+    // (or a whole period past). On the console a spin iteration is a few cycles; here one can take longer than that
+    // window (the scheduler runs between checkpoints), the spin misses it and waits a whole period more: 15 frames a
+    // second instead of 30. By default the current Count is returned, so the spin ends at once and sceGsSyncV, which
+    // follows, waits for the vblank (in-engine scenes 15 -> 30 fps, battles 14.5 -> 18.5); TTA_SKIP_VBLANK_SPIN=0 keeps
+    // the game's spin.
+    void vblankSpinTarget(uint8_t *, R5900Context *ctx, PS2Runtime *runtime)
+    {
+        setReturnU32(ctx, runtime->readCop0Count());
+        ctx->pc = getRegU32(ctx, 31);
     }
 
     void applyTta(PS2Runtime &runtime)
@@ -577,6 +595,8 @@ namespace
             runtime.registerFunction(0x002B6178u, &nodeDestroyTrace);
             runtime.registerFunction(0x002B65A8u, &nodeAddTrace);
         }
+        if (const char *skip = std::getenv("TTA_SKIP_VBLANK_SPIN"); !skip || *skip != '0')
+            runtime.registerFunction(0x00212628u, &vblankSpinTarget);
         if (std::getenv("TTA_FPS_LOG"))
             runtime.registerFunction(0x00212478u, &frameSwapFps);
         if (std::getenv("TTA_TRACE_MPEG") && (g_getPicture = runtime.lookupFunction(0x0027ED48u)))
