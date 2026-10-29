@@ -3,12 +3,12 @@
 # TLOTR_TTA_Recomp
 
 **A native Windows, Linux and macOS port of *The Lord of the Rings: The Third Age* (NTSC-U, `SLUS-21027`), made by statically recompiling the game's PlayStation 2 code to C++.**<br>
-Not an emulator: the game's own MIPS R5900 code, rebuilt as a native program on a reimplementation of the PS2 hardware.
+Not an emulator: the game's own code (EE, IOP modules, VU microcode) rebuilt as native code, its graphics drawn by a native OpenGL renderer.
 
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-1b8cff)
 ![Compiler](https://img.shields.io/badge/compiler-GCC%20%7C%20Clang-1b8cff)
 ![Based on](https://img.shields.io/badge/based%20on-PS2Recomp-17a35b)
-![Status](https://img.shields.io/badge/status-bring--up-d01f3c)
+![Status](https://img.shields.io/badge/status-playable%20to%20the%20first%20battle-e8a317)
 
 </div>
 
@@ -22,27 +22,32 @@ Not an emulator: the game's own MIPS R5900 code, rebuilt as a native program on 
 
 ## Status
 
-**Bring-up, not playable yet.** Windows comes first, then Linux and macOS.
+**Plays from the boot to the first battle; not playable through yet.** Windows comes first, then Linux and macOS.
 
 | Milestone | |
 |---|:---:|
 | Map the stripped main ELF (Ghidra function map, SDK functions from the fork's signature database) | ✅ |
 | Recompile it and link the generated code with the PS2Recomp runtime (Windows) | ✅ |
 | Boot: EE kernel, the game's own IOP modules, EA's heap, first frames on screen | ✅ |
-| Loading: CD reads from the disc files | ✅ |
-| Memory card check, legal screen | ✅ |
+| Loading, memory card check, legal screen | ✅ |
 | Movies, title screen | ✅ |
-| Menus, New Game, the intro cinematic | ✅ |
-| No GS emulation: the GS stream drawn by the native OpenGL renderer (no paraLLEl-GS) | ✅ |
-| IOP modules (sound, streaming, pad, memory card) recompiled to C++ | ✅ |
-| Game time and sound on the PC's clock | ✅ |
-| VU1 microprograms translated into native draws | 🔧 |
+| New Game, the intro cinematic | ✅ |
 | First battle | ✅ |
 | Battles playable, the first chapter | 🔧 |
-| Sound and music | ⏳ |
-| Memory card | ⏳ |
+| Sound and music (the driver runs; not checked by ear yet) | 🔧 |
+| Saving to the memory card | ⏳ |
 | Linux and macOS builds | ⏳ |
 | Full speed, widescreen, higher resolution | ⏳ |
+
+**Native port** (no PS2 hardware emulation left, the shared goal of the fork's ports):
+
+| Layer | |
+|---|:---:|
+| Graphics: the GS stream drawn by the native OpenGL renderer (no paraLLEl-GS) | ✅ |
+| IOP modules (sound, streaming, pad, memory card) recompiled to C++, none interpreted | ✅ |
+| Game time, sound and IOP on the PC's clock | ✅ |
+| VU1 microprograms translated into native draws | 🔧 |
+| Frame loop on real time (frame cap of the player's choice) | ⏳ |
 
 ✅ works · 🔧 in progress · ⏳ not reached yet
 
@@ -63,8 +68,7 @@ was CD reads completing at once; they now take drive-like time.
   <img src="docs/screenshots/2026-10-29-in-engine-forest.png" width="400" alt="An in-engine scene: a dark horse in a misty forest, drawn by the native OpenGL renderer">
 </p>
 
-**2026-10-29.** After New Game: the game's own 3D, drawn by the native OpenGL renderer (no paraLLEl-GS), with the
-IOP modules recompiled and the game on the PC's clock. A scene load after it still crashes (a use after free).
+**2026-10-29.** After New Game: the in-engine intro cinematic, the game's own 3D drawn by the native OpenGL renderer.
 
 <p align="center">
   <img src="docs/screenshots/2026-10-28-title-screen.png" width="400" alt="The title screen: The Lord of the Rings: The Third Age logo over a dark blue background, with New Game, Load Game and More">
@@ -108,12 +112,13 @@ campaign. Accuracy first; once it is playable, widescreen and higher internal re
 disc files (game/) ──► Ghidra (headless, EE extension) + ExportPS2Functions ──► recomp/ghidra/tta_functions.csv
                    ──► ps2_analyzer (SCE SDK signatures) ──► recomp/tta_slus21027.toml (stubs, entry points)
                                            │
-                     ps2_recomp ──► C++ (one file per function, generated/) · ps2_vu_aot ──► VU1 microcode (generated/vu1/)
+                     ps2_recomp ──► C++ (one file per function, generated/) · ps2_vu_aot ──► VU microcode (generated/vu1/)
+                     tools/iop_recomp.py ──► the IRX modules as C++ (generated/iop/, scripts/iop_recomp.sh)
                                            │
-                 CMakeLists.txt ──► PS2Recomp runtime + generated code + runtime/tta_overrides.cpp
+                 CMakeLists.txt ──► PS2Recomp runtime + generated code + runtime/ (TTA's overrides)
                                            │
-   PS2Recomp runtime: EE kernel HLE · DMAC · GIF/GS · VIF/VU0/VU1 · IPU ─┼─► ps2EntryRunner
-   PS2Recomp IOP:     R3000A interpreter running the game's own IRX · SPU2 · SIO2
+   PS2Recomp runtime: EE kernel HLE · DMAC · GIF + native OpenGL GS renderer · VIF/VU · IPU ─┼─► ps2EntryRunner
+   PS2Recomp IOP:     the game's IRX as recompiled code · SPU2 on the PC's clock · SIO2
 ```
 
 - The retail executable is stripped. Ghidra with the Emotion Engine extension maps its functions, and `ps2_analyzer`
@@ -121,7 +126,8 @@ disc files (game/) ──► Ghidra (headless, EE extension) + ExportPS2Function
 - PS2Recomp turns every function into C++ and emits the address-indexed function table.
 - The top-level `CMakeLists.txt` builds the fork's runtime, swaps its placeholder function table for the generated one
   and links everything into `ps2EntryRunner`.
-- `runtime/tta_overrides.cpp` holds the game-specific bindings.
+- `runtime/tta_overrides.cpp` holds the game-specific bindings and defaults (native GS renderer, recompiled IOP
+  modules, COP0 Count on the PC's clock, drive-like CD timing); `runtime/tta_native.cpp` the native rendering work.
 
 The PS2Recomp fork lives in `PS2Recomp/` (git submodule, [boubou666/PS2Recomp](https://github.com/boubou666/PS2Recomp)),
 shared with the *Twisted Metal: Black*, *Valkyrie Profile 2* and *Drakengard* recompilations.
@@ -146,6 +152,7 @@ scripts/extract_iso.sh "/path/to/Lord of the Rings, The - The Third Age (USA).is
 scripts/build_tools.sh                                   # ps2_recomp, ps2_analyzer, ps2_vu_aot -> build/tools
 GHIDRA_INSTALL_DIR=/path/to/ghidra scripts/ghidra.sh     # only to regenerate recomp/ghidra/tta_functions.csv
 scripts/recomp.sh                                        # ELF + recomp/tta_slus21027.toml -> generated/
+scripts/iop_recomp.sh                                    # boots once, recompiles the IRX modules -> generated/iop/
 scripts/build_runtime.sh                                 # runtime + generated code -> build/game
 scripts/run.sh                                           # ps2EntryRunner game/SLUS_210.27
 ```
@@ -165,16 +172,14 @@ outside the MSYS2 shell.
 
 ## Sharing the machine with other ports
 
-Several PS2Recomp ports are developed on the same machine. A timed game run or benchmark takes the shared bench lock
-first, so that another port's build or game does not skew it:
+Several PS2Recomp ports are developed on the same machine and share a two-slot bench lock (the fork's
+`tools/bench_lock.sh`): a game run takes one slot, a build or a timed run takes both, in arrival order.
 
 ```bash
-scripts/bench_lock.sh take 15 "boot timing"   # waits until the lock is empty and no other port's game runs
-scripts/run.sh ...
+scripts/bench_lock.sh take 15 "boot check"           # a game run: one slot
+scripts/bench_lock.sh take 20 "full rebuild" alone   # a build or a timed run: the whole bench
 scripts/bench_lock.sh release
 ```
-
-Heavy builds take no lock, but do not start while someone holds it.
 
 ## Legal
 
