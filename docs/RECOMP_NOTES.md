@@ -172,6 +172,19 @@ How the port is brought up, every fix and how it was found, and what remains ope
    the end. Boot 54 reaches the title screen (New Game / Load Game / More); the attract movie plays and returns to it.
    Mind the MPEG HLE's logs: GetPicture's lines stop after 32 on purpose, frame 31 is not where decoding stops.
 
+18. Boots 70-78 (2026-10-29): a pad script through New Game (`PS2X_PAD_SCRIPT`, Cross every 6 s from 55 s) reaches
+   in-engine 3D (forest, a Black Rider) at ~15-20 game frames/s on the native defaults, then the game dies on the
+   next scene load. The old configuration (paraLLEl-GS, interpreted IOP, EE clock) dies the same way, so it predates
+   the native work. Seen: dlmalloc's `malloc_consolidate` (0x2506C0) looping on a fastbin cycle, a malloc bin
+   loop (0x24F980), and a virtual call at 0x2B61CC (0x2B6180 walks an array of objects at [this+0xC0], count
+   [this+0xC4]) through an object whose vtable word points into code: an object freed and reused while still listed.
+   Tools in `runtime/tta_overrides.cpp`: `TTA_HEAP_CHECK=1` (a free of a chunk already on a fastbin: EA's dlmalloc
+   marks those with size bit 2), `TTA_HEAP_WATCH=<addr>` (every malloc/free of one block, with the callers),
+   `TTA_HEAP_WALK=1` (the whole heap walked around every malloc/free: no failure in boot 78, so the corruption is
+   not inside the allocator), `TTA_TRACE_MPEG=1` (GetPicture's buffer is 1024 macroblocks, enough for 512 x 448).
+   Fork `tlotr/mpeg-nodata-caller`: the Nodata callback runs on GetPicture's thread (it frees game memory; as a
+   queued invocation it could cut into another thread's malloc). Right on its own, not the cause here.
+
 ## Native PC port (2026-10-28 / 29)
 
 The goal, shared with TMB, VP2S and JC2: no PS2 emulation left. Fork `docs/native.md` (on `native/renderer`) has the

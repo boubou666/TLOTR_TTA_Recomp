@@ -51,6 +51,13 @@ what remains open.
 ## Screenshots
 
 <p align="center">
+  <img src="docs/screenshots/2026-10-29-in-engine-forest.png" width="400" alt="An in-engine scene: a dark horse in a misty forest, drawn by the native OpenGL renderer">
+</p>
+
+**2026-10-29.** After New Game: the game's own 3D, drawn by the native OpenGL renderer (no paraLLEl-GS), with the
+IOP modules recompiled and the game on the PC's clock. A scene load after it still crashes (a use after free).
+
+<p align="center">
   <img src="docs/screenshots/2026-10-28-title-screen.png" width="400" alt="The title screen: The Lord of the Rings: The Third Age logo over a dark blue background, with New Game, Load Game and More">
   <img src="docs/screenshots/2026-10-28-attract-movie.png" width="400" alt="The attract movie: two characters on a forest path at dusk">
 </p>

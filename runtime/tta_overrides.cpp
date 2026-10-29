@@ -263,6 +263,156 @@ namespace
 #endif
     }
 
+    // TTA_TRACE_MPEG=1 (bring-up aid): each call of sceMpegGetPicture (0x27ED48, the HLE stub): the picture buffer
+    // and its size in macroblocks, which the HLE must not write past (a 512 x 448 picture is 896 macroblocks).
+    PS2Runtime::RecompiledFunction g_getPicture = nullptr;
+    void getPictureTrace(uint8_t *rdram, R5900Context *ctx, PS2Runtime *runtime)
+    {
+        static uint32_t s_calls = 0, s_lastBuffer = ~0u, s_lastCount = ~0u;
+        const uint32_t buffer = getRegU32(ctx, 5), count = getRegU32(ctx, 6);
+        if (++s_calls <= 5u || buffer != s_lastBuffer || count != s_lastCount)
+            std::fprintf(stderr, "[tta:mpeg] GetPicture #%u mpeg=0x%x buffer=0x%x mbcount=%u (%u bytes) ra=0x%x\n", s_calls,
+                         getRegU32(ctx, 4), buffer, count, count * 1024u, getRegU32(ctx, 31));
+        s_lastBuffer = buffer;
+        s_lastCount = count;
+        g_getPicture(rdram, ctx, runtime);
+    }
+
+    // TTA_HEAP_CHECK=1 (bring-up aid): EA's dlmalloc free (0x24FF28, a0 = the heap state, a1 = the block) pushes a
+    // small chunk on a fastbin and marks its size word with bit 2. A free of a chunk that already has that mark is a
+    // double free: malloc_consolidate (0x2506C0) then loops forever on the fastbin's cycle. Logs it with the callers.
+    // TTA_HEAP_WATCH=<hex address>: every malloc returning it and every free of it, with the callers on the stack.
+    uint32_t heapWatch()
+    {
+        static const uint32_t s_watch = []
+        {
+            const char *value = std::getenv("TTA_HEAP_WATCH");
+            return value ? static_cast<uint32_t>(std::strtoul(value, nullptr, 16)) : 0u;
+        }();
+        return s_watch;
+    }
+
+    void logCallers(uint8_t *rdram, R5900Context *ctx)
+    {
+        const uint32_t sp = getRegU32(ctx, 29);
+        for (uint32_t i = 0; i < 48u; ++i)
+        {
+            const uint32_t word = rd32(rdram, sp + i * 4u);
+            if (word >= 0x00100000u && word < 0x003A0000u && (word & 3u) == 0u)
+                std::fprintf(stderr, " 0x%x", word);
+        }
+        std::fprintf(stderr, "%c", 10);
+    }
+
+    // TTA_HEAP_WALK=1: the whole EA heap walked chunk by chunk before and after every malloc / free, from its first
+    // chunk (the word at its region base, 0x3A9780's [0]) to its top chunk (state + 0x440). The first walk that fails says whether the heap broke inside an
+    // allocator call or between two of them (a stray write elsewhere), with the calls on both sides.
+    bool heapWalkEnabled()
+    {
+        static const bool s_on = std::getenv("TTA_HEAP_WALK") != nullptr;
+        return s_on;
+    }
+
+    // 0 when the heap walks cleanly, else the bad chunk (and its predecessor in prev).
+    uint32_t heapWalk(const uint8_t *rdram, uint32_t &prev)
+    {
+        const uint32_t base = rd32(rdram, kEaHeapState), size = rd32(rdram, kEaHeapState + 0xCu);
+        const uint32_t top = rd32(rdram, kEaHeapState + 0x10u + 0x440u);
+        if (base == 0u || size == 0u || top < base || top >= base + size)
+            return 0u; // not set up yet
+        uint32_t p = rd32(rdram, base); // EA's region header: [0] its first dlmalloc chunk
+        if (p < base || p >= top)
+            return 0u;
+        prev = 0u;
+        for (uint32_t steps = 0; p < top && steps < 1000000u; ++steps)
+        {
+            const uint32_t chunk = rd32(rdram, p + 4u) & ~7u;
+            if (chunk < 16u || (chunk & 7u) || p + chunk > top || p + chunk < p)
+                return p;
+            prev = p;
+            p += chunk;
+        }
+        return p == top ? 0u : p;
+    }
+
+    struct HeapCall
+    {
+        const char *what = "";
+        uint32_t arg = 0, ra = 0;
+    };
+    HeapCall g_lastHeapCall;
+    bool g_heapReported = false;
+
+    void heapWalkCheck(uint8_t *rdram, R5900Context *ctx, const char *when, const HeapCall &call)
+    {
+        if (!heapWalkEnabled() || g_heapReported)
+            return;
+        uint32_t prev = 0u;
+        const uint32_t bad = heapWalk(rdram, prev);
+        if (bad == 0u)
+            return;
+        g_heapReported = true;
+        std::fprintf(stderr, "[tta:heap] walk failed %s %s(0x%x) ra=0x%x (previous call %s(0x%x) ra=0x%x): chunk 0x%x size word 0x%x, "
+                             "previous chunk 0x%x size word 0x%x; callers:",
+                     when, call.what, call.arg, call.ra, g_lastHeapCall.what, g_lastHeapCall.arg, g_lastHeapCall.ra, bad,
+                     rd32(rdram, bad + 4u), prev, prev ? rd32(rdram, prev + 4u) : 0u);
+        logCallers(rdram, ctx);
+        dumpWords(rdram, "around the bad chunk", (bad - 0x40u) & ~0xFu, 0x80u);
+    }
+
+    void heapMallocWatch(uint8_t *rdram, R5900Context *ctx, PS2Runtime *runtime)
+    {
+        const uint32_t ra = getRegU32(ctx, 31), size = getRegU32(ctx, 5);
+        const HeapCall call{"malloc", size, ra};
+        heapWalkCheck(rdram, ctx, "before", call);
+        FUN_0024f780_0x24f780(rdram, ctx, runtime);
+        heapWalkCheck(rdram, ctx, "after", call);
+        g_lastHeapCall = call;
+        if (heapWatch() != 0u && getRegU32(ctx, 2) == heapWatch())
+        {
+            static uint32_t s_count = 0;
+            std::fprintf(stderr, "[tta:heap] #%u malloc(0x%x) -> 0x%x ra=0x%x callers:", ++s_count, size, heapWatch(), ra);
+            logCallers(rdram, ctx);
+        }
+    }
+
+    void heapFreeCheck(uint8_t *rdram, R5900Context *ctx, PS2Runtime *runtime)
+    {
+        const uint32_t state = getRegU32(ctx, 4), mem = getRegU32(ctx, 5);
+        if (mem != 0u && mem == heapWatch())
+        {
+            static uint32_t s_count = 0;
+            std::fprintf(stderr, "[tta:heap] #%u free(0x%x) size word 0x%x ra=0x%x callers:", ++s_count, mem,
+                         rd32(rdram, mem - 4u), getRegU32(ctx, 31));
+            logCallers(rdram, ctx);
+        }
+        if (mem != 0u)
+        {
+            const uint32_t size = rd32(rdram, mem - 4u);
+            const uint32_t maxFast = rd32(rdram, state + 4u);
+            const uint32_t chunk = size & ~7u;
+            static uint32_t s_reported = 0;
+            if ((size & 4u) && chunk <= (maxFast & ~7u) && s_reported++ < 20u)
+            {
+                const uint32_t sp = getRegU32(ctx, 29);
+                std::fprintf(stderr, "[tta:heap] double free of 0x%x (chunk size 0x%x) state=0x%x ra=0x%x stack:", mem, chunk,
+                             state, getRegU32(ctx, 31));
+                for (uint32_t i = 0; i < 16u; ++i)
+                {
+                    const uint32_t word = rd32(rdram, sp + i * 4u);
+                    if (word >= 0x00100000u && word < 0x003A0000u)
+                        std::fprintf(stderr, " 0x%x", word);
+                }
+                std::fprintf(stderr, "%c", 10);
+            }
+        }
+        const HeapCall call{"free", mem, getRegU32(ctx, 31)};
+        heapWalkCheck(rdram, ctx, "before", call);
+        FUN_0024ff28_0x24ff28(rdram, ctx, runtime);
+        heapWalkCheck(rdram, ctx, "after", call);
+        g_lastHeapCall = call;
+    }
+
     void applyTta(PS2Runtime &runtime)
     {
         requestExactVu1Flags();
@@ -318,6 +468,12 @@ namespace
             runtime.registerFunction(0x0019A6C0u, &callTrace<0x19A6C0u, FUN_0019a6c0_0x19a6c0>);
             runtime.registerFunction(0x00333F60u, &callTrace<0x333F60u, entry_333f60_0x333fb8>);
         }
+        if (std::getenv("TTA_HEAP_CHECK") || heapWatch() || heapWalkEnabled())
+            runtime.registerFunction(0x0024FF28u, &heapFreeCheck);
+        if (heapWatch() || heapWalkEnabled())
+            runtime.registerFunction(0x0024F780u, &heapMallocWatch);
+        if (std::getenv("TTA_TRACE_MPEG") && (g_getPicture = runtime.lookupFunction(0x0027ED48u)))
+            runtime.registerFunction(0x0027ED48u, &getPictureTrace);
         if (std::getenv("TTA_TRACE_STRIPS"))
         {
             runtime.registerFunction(0x00218FB8u, &stripTrace);
