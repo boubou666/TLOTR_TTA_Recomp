@@ -48,6 +48,20 @@ if(TTA_VU1_AOT_SOURCES)
     target_sources(ps2EntryRunner PRIVATE $<TARGET_OBJECTS:tta_vu1_aot>)
 endif()
 
+# IOP modules recompiled to native C++ by the fork's tools/iop_recomp.py (scripts/iop_recomp.sh writes them to
+# generated/iop/, derived from the game's IRX files like the rest of generated/; PS2X_IOP_NATIVE=1 runs them): their
+# own object library, out of the unity batches.
+file(GLOB TTA_IOP_NATIVE_SOURCES CONFIGURE_DEPENDS "${TTA_GENERATED_DIR}/iop/*.cpp")
+if(TTA_IOP_NATIVE_SOURCES)
+    add_library(tta_iop_native OBJECT ${TTA_IOP_NATIVE_SOURCES})
+    target_link_libraries(tta_iop_native PRIVATE ps2_iop)
+    set_target_properties(tta_iop_native PROPERTIES UNITY_BUILD OFF)
+    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+        target_compile_options(tta_iop_native PRIVATE -O2 -g0)
+    endif()
+    target_sources(ps2EntryRunner PRIVATE $<TARGET_OBJECTS:tta_iop_native>)
+endif()
+
 # register_functions.cpp fills the function table in one constructor of ~214,000 stores: GCC takes 35 min over it at
 # -O2 -g, the tail of every full build. It runs once at startup, so build it alone and unoptimized.
 set_source_files_properties("${TTA_GENERATED_DIR}/register_functions.cpp" TARGET_DIRECTORY ps2EntryRunner PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)

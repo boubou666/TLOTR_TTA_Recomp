@@ -3,7 +3,8 @@
 // runs each microprogram on its own VU1 copy (the sandbox) and draws what it sends the GS with the native renderer;
 // DIRECT packets that only draw go the same way. TTA's own programs move to translated code one by one (Choice::Port).
 //
-// The frame ends in TTA's frame swap (0x212478, which waits on the vsync counter and flips the double buffer).
+// The frame ends at each sceGsSwapDBuffDc (0x277448): the game's frame swap (0x212478) calls it only in some states,
+// and the movie player flips on its own.
 // TTA_NATIVE_LOG=1 turns on the adapter's statistics (programs drawn natively per start address, per 250 frames).
 
 #include "tta_native.h"
@@ -22,20 +23,21 @@
 #ifdef TTA_HAVE_VU1_STREAM
 namespace
 {
-    constexpr uint32_t kFrameSwap = 0x00212478u;
+    constexpr uint32_t kSwapDBuffDc = 0x00277448u;
+    PS2Runtime::RecompiledFunction g_swapDBuffDc = nullptr; // the HLE stub it replaces
 
-    void frameSwap(uint8_t *rdram, R5900Context *ctx, PS2Runtime *runtime)
+    void swapDBuffDc(uint8_t *rdram, R5900Context *ctx, PS2Runtime *runtime)
     {
-        FUN_00212478_0x212478(rdram, ctx, runtime);
+        g_swapDBuffDc(rdram, ctx, runtime);
         ps2x::native::Vu1StreamAdapter::instance().frameEnd();
     }
 
-    // TTA sets its buffers with sceGsSetDefDBuffDc at 640 x 448 (interlaced, frame mode): the drawing area is
-    // centred on the GS's 2048, 2048 (XYOFFSET).
+    // TTA draws a 512 x 448 picture (sceGsSetDefDBuffDc; the GS frame shows it 512 pixels wide), centred on the
+    // GS's 2048, 2048 (XYOFFSET).
     ps2x::native::Screen screen()
     {
         ps2x::native::Screen screen;
-        screen.width = 640.0f;
+        screen.width = 512.0f;
         screen.height = 448.0f;
         screen.originX = 2048.0f - screen.width / 2.0f;
         screen.originY = 2048.0f - screen.height / 2.0f;
@@ -71,7 +73,11 @@ namespace tta
         ps2x::native::Vu1StreamAdapter::Config config;
         config.screen = screen();
         ps2x::native::Vu1StreamAdapter::instance().install(config);
-        runtime.registerFunction(kFrameSwap, &frameSwap);
+        g_swapDBuffDc = runtime.lookupFunction(kSwapDBuffDc);
+        if (g_swapDBuffDc)
+            runtime.registerFunction(kSwapDBuffDc, &swapDBuffDc);
+        else
+            std::cout << "[tta] TTA_NATIVE: no function at sceGsSwapDBuffDc 0x277448, the native frame never ends" << std::endl;
         std::cout << "[tta] native renderer: every VU1 program on the sandbox, drawn natively" << std::endl;
 #endif
     }

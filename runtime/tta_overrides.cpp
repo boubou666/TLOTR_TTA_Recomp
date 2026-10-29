@@ -266,12 +266,20 @@ namespace
     void applyTta(PS2Runtime &runtime)
     {
         requestExactVu1Flags();
-        // paraLLEl-GS by default (PS2X_GS_RENDERER still overrides it): the CPU rasterizer draws TTA's movie
-        // frames as solid magenta, its fallback colour for a texture it cannot sample.
-        if (runtime.gsForPresentation().requestParallelRenderer())
-            std::cout << "[tta] GS renderer: paraLLEl-GS" << std::endl;
+        // The native GS renderer by default (GSNativeBackend: the GS stream translated into OpenGL draws, no GS
+        // emulation; it draws TTA's movies, menus and off-screen passes). PS2X_GS_RENDERER still chooses another.
+        if (runtime.requestNativeGsRenderer())
+            std::cout << "[tta] GS renderer: native (OpenGL)" << std::endl;
         runtime.pinGuestHeap(PS2Runtime::reservedMemoryBase() - kRuntimeHeapBytes, PS2Runtime::reservedMemoryBase());
         tta::installNative(runtime);
+        // TTA_WALLCLOCK=1: COP0 Count on the host clock. TTA times its frames with Count (0x1C3588: the step in ms
+        // from Count, 1000 / 294912000 per tick, and a spin until 1/60 s of Count has passed), so the game then runs
+        // on real time instead of the emulated EE clock.
+        if (const char *wall = std::getenv("TTA_WALLCLOCK"); wall && *wall == '1')
+        {
+            runtime.setCop0WallClock(true);
+            std::cout << "[tta] COP0 Count on the host clock" << std::endl;
+        }
         if (std::getenv("TTA_TRACE_ALLOC"))
         {
             runtime.registerFunction(kAllocCall, &allocCallTrace);
