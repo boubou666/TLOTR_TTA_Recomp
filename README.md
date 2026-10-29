@@ -46,6 +46,7 @@ Not an emulator: the game's own code (EE, IOP modules, VU microcode) rebuilt as 
 | Graphics: the GS stream drawn by the native OpenGL renderer (no paraLLEl-GS) | ✅ |
 | IOP modules (sound, streaming, pad, memory card) recompiled to C++, none interpreted | ✅ |
 | Game time, sound and IOP on the PC's clock | ✅ |
+| VU1 off the emulated VU1: every microprogram run by the native port and drawn by the OpenGL renderer (`TTA_NATIVE=1`, first battle matches) | 🔧 |
 | VU1 microprograms translated into native draws | 🔧 |
 | Frame loop on real time (frame cap of the player's choice) | ⏳ |
 
@@ -55,6 +56,14 @@ Not an emulator: the game's own code (EE, IOP modules, VU microcode) rebuilt as 
 what remains open.
 
 ## Screenshots
+
+<p align="center">
+  <img src="docs/screenshots/2026-10-29-native-vu1-black-riders.png" width="400" alt="Berethor facing three Black Riders in the forest cinematic, drawn without the emulated VU1">
+</p>
+
+**2026-10-29.** The Black Riders' cinematic with `TTA_NATIVE=1`: no VU1 program runs on the emulated VU1 any more. The
+native port runs each one itself and hands what it draws to the OpenGL renderer in GS order, with the renderer's own
+textures and targets. The first battle matches the VU1 picture, at the same 19.5 frames per second.
 
 <p align="center">
   <img src="docs/screenshots/2026-10-29-black-rider.png" width="400" alt="A Black Rider raising its sword in a misty forest, in-engine">

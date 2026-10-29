@@ -232,10 +232,27 @@ layers. What TTA runs by default now (submodule on `tlotr/native`):
   on real time with no override of its loop. `TTA_WALLCLOCK=0` gives the emulated EE clock back.
 - **Sound and IOP timers on the host clock**: `scripts/run.sh` exports `PS2X_SPU2_WALLCLOCK=1` and
   `PS2X_IOP_WALLCLOCK=1` (the SPU2 reads its switch before the override runs).
-- **VU1**: the microprograms run AOT-compiled (C++). `TTA_NATIVE=1` instead runs them on the fork's generic
-  `Vu1StreamAdapter` (`native/vu1-stream`, written for TTA; TMB and JC2 adopt it), whose sandbox and GifToNative ignore
-  FRAME/ZBUF set inside XGKICK packets: TTA renders off-screen passes that way, so its frame comes out black on the
-  GL backend. TTA uses six VU1 programs (0x0, 0x620, 0x1968, 0x1B80, 0x1E68, 0x1EA8); next is translating them.
+- **VU1**: the microprograms run AOT-compiled (C++) by default. `TTA_NATIVE=1` takes VU1 off the emulated path: the
+  fork's generic `Vu1StreamAdapter` (`native/vu1-stream`) runs every program on its own VU1 copy (the sandbox) in
+  stream order, VU1 skips them, and what they draw goes to the GL GS back end at their place in the GS stream (fork
+  `tlotr/native-vu1-gs`, also on `tlotr/native`). Boots 116-124 got TTA's first battle to match the VU1 picture at
+  the same 19.5 fps:
+  - the native frame never ended in game: TTA's frame swap 0x212478 calls sceGsSwapDBuffDc only outside the game
+    (a0 = 0), so `tta_native.cpp` now ends it at 0x212478 too (movies still end it at 0x277448);
+  - every frame was black: TTA uploads textures as `DIRECT 1` (an IMAGE tag, NLOOP 32767) then `DIRECT 0x7fff` (the
+    pixels). VIF1 feeds the second to the image without asking the adapter, which read the pixels as GIF tags and,
+    when they looked like draws, numbered groups VIF1 never did; every GS marker after that missed its group. The
+    adapter now follows a pending image as the VIF1 interpreter does;
+  - textures came out as noise: the native renderer's texture cache decodes from a CPU copy of GS memory, while TTA
+    reuses texture pages and CLUTs within the frame and textures from its own GL targets. With
+    `Config::gsWrites` (TTA turns it on) the sandbox's batches are drawn by the GS front end, each replaying the
+    register writes its packet made (TEX0 with its CLUT load, CLAMP, TEX1, ALPHA, ...), so textures, CLUTs and
+    targets are the back end's, in stream order;
+  - characters' textures were wrong: TTA sends texture and CLUT uploads between a program's MSCAL and its MSCNTs
+    (programs 0x1F8 and 0x1E68), so an MSCNT now opens a draw group of its own on both sides.
+  Hot programs in battle (`TTA_VU1_STATS=1`, per 5 s): 8e45395d:0x460 ~20500 (a textured, fogged triangle strip with
+  guard-band clipping; its MSCAL only sets up, each batch is drawn by an MSCNT after its V3-32 unpacks), 0x268 ~8000,
+  8df1e059:0x10 / 0x190 ~4400 each. Next: translate those into the port's own draws (`Choice::Port`).
 
 Boots 55-69 on the way there; boot 69 reaches the title screen with every default and no environment.
 

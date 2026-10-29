@@ -550,7 +550,6 @@ namespace
             setenv("PS2X_IOP_NATIVE", "1", 0);
 #endif
         }
-        tta::installNative(runtime);
         // COP0 Count on the host clock (TTA_WALLCLOCK=0: the emulated EE clock). TTA times its frames with Count
         // (0x1C3588: the step in ms from Count, 1000 / 294912000 per tick, then a spin until 1/60 s of Count has
         // passed), so its engine and its frame limiter run on real time, not on the emulated EE's cycles.
@@ -606,6 +605,7 @@ namespace
             runtime.registerFunction(0x00218FB8u, &stripTrace);
             runtime.registerFunction(0x002C9A08u, &meshTrace);
         }
+        tta::installNative(runtime); // last: it wraps what is registered at the frame swap
         std::cout << "[tta] The Third Age (NTSC-U SLUS-21027) overrides applied" << std::endl;
     }
 }

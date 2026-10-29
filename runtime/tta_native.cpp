@@ -3,8 +3,8 @@
 // runs each microprogram on its own VU1 copy (the sandbox) and draws what it sends the GS with the native renderer;
 // DIRECT packets that only draw go the same way. TTA's own programs move to translated code one by one (Choice::Port).
 //
-// The frame ends at each sceGsSwapDBuffDc (0x277448): the game's frame swap (0x212478) calls it only in some states,
-// and the movie player flips on its own.
+// The frame ends at the game's frame swap (0x212478) and at the movie player's sceGsSwapDBuffDc (0x277448): the frame
+// swap calls sceGsSwapDBuffDc only outside the game.
 // TTA_NATIVE_LOG=1 turns on the adapter's statistics (programs drawn natively per start address, per 250 frames).
 
 #include "tta_native.h"
@@ -12,6 +12,7 @@
 #include "ps2_recompiled_functions.h"
 #include "ps2_runtime.h"
 
+#include <cstdio>
 #include <cstdlib>
 #include <iostream>
 #include <string>
@@ -27,9 +28,23 @@ namespace
     constexpr uint32_t kSwapDBuffDc = 0x00277448u;
     PS2Runtime::RecompiledFunction g_swapDBuffDc = nullptr; // the HLE stub it replaces
 
+    // The game's own frame swap: it calls sceGsSwapDBuffDc only with a0 = 0 (not in game), so the frame ends here.
+    constexpr uint32_t kFrameSwap = 0x00212478u;
+    PS2Runtime::RecompiledFunction g_frameSwap = nullptr;
+    bool g_inFrameSwap = false;
+
     void swapDBuffDc(uint8_t *rdram, R5900Context *ctx, PS2Runtime *runtime)
     {
         g_swapDBuffDc(rdram, ctx, runtime);
+        if (!g_inFrameSwap) // the movie player's flips
+            ps2x::native::Vu1StreamAdapter::instance().frameEnd();
+    }
+
+    void frameSwap(uint8_t *rdram, R5900Context *ctx, PS2Runtime *runtime)
+    {
+        g_inFrameSwap = true;
+        g_frameSwap(rdram, ctx, runtime);
+        g_inFrameSwap = false;
         ps2x::native::Vu1StreamAdapter::instance().frameEnd();
     }
 
@@ -71,6 +86,26 @@ namespace
     void vu1StatsObserve(const uint8_t *stream, size_t bytes)
     {
         Vu1Stats &st = g_vu1Stats;
+        // TTA_VIF1_DUMP=<dir>: some whole VIF1 transfers that start program 0x460 (MSCAL 0x8c), as vif1_<n>.bin.
+        static const char *s_vifDump = std::getenv("TTA_VIF1_DUMP");
+        static int s_vifDumped = 0, s_vifSeen = 0;
+        if (s_vifDump && s_vifDumped < 12)
+        {
+            const uint32_t *w = reinterpret_cast<const uint32_t *>(stream);
+            bool has = false;
+            for (size_t k = 0; k < bytes / 4u && !has; ++k)
+                has = (w[k] & 0x7fffffffu) == 0x1400008cu;
+            if (has && ++s_vifSeen % 50 == 0)
+            {
+                char path[512];
+                std::snprintf(path, sizeof(path), "%s/vif1_%02d.bin", s_vifDump, s_vifDumped++);
+                if (FILE *file = std::fopen(path, "wb"))
+                {
+                    std::fwrite(stream, 1, bytes, file);
+                    std::fclose(file);
+                }
+            }
+        }
         const uint32_t *words = reinterpret_cast<const uint32_t *>(stream);
         const size_t count = bytes / 4u;
         size_t i = 0;
@@ -117,7 +152,7 @@ namespace
                 i += size;
                 break;
             }
-            case 0x50: case 0x51: i += static_cast<size_t>(imm ? imm : 65536u) * 4u; break; // DIRECT(HL)
+            case 0x50: case 0x51: ++st.calls[{0xd1ec7u, 0u}]; i += static_cast<size_t>(imm ? imm : 65536u) * 4u; break; // DIRECT(HL), counted as d1ec7:0
             case 0x14: case 0x15: ++st.calls[{st.codeSum, imm * 8u}]; break;                  // MSCAL(F)
             default: break;
             }
@@ -171,12 +206,47 @@ namespace tta
         }
         ps2x::native::Vu1StreamAdapter::Config config;
         config.screen = screen();
+        // TTA draws into its own targets and textures from them: the GL GS renderer draws the sandbox's packets.
+        config.gsWrites = true;
+        // TTA_VU1_SNAP=<dir>: VU1 data memory at some MSCALs of 0x460 and 0x268 (the hot programs), as
+        // <dir>/snap_<pc>_<n>_top<TOP>.bin, to read their input layout; the programs still run on the sandbox.
+        if (const char *snapDir = std::getenv("TTA_VU1_SNAP"))
+        {
+            const std::string dir = snapDir;
+            config.choose = [dir](ps2x::native::Vu1StreamAdapter &adapter, uint32_t startPc) {
+                static uint64_t s_calls = 0;
+                static int s_written = 0;
+                if ((startPc == 0x460u || startPc == 0x268u) && ++s_calls % 4000u == 0u && s_written < 24)
+                {
+                    char path[512];
+                    std::snprintf(path, sizeof(path), "%s/snap_%x_%02d_top%x.bin", dir.c_str(), startPc, s_written++, adapter.top());
+                    if (FILE *file = std::fopen(path, "wb"))
+                    {
+                        std::fwrite(adapter.data(), 16, 1024, file);
+                        std::fwrite(adapter.code(), 1, 16 * 1024, file);
+                        std::fclose(file);
+                    }
+                }
+                return ps2x::native::Vu1StreamAdapter::Choice::Sandbox;
+            };
+        }
         ps2x::native::Vu1StreamAdapter::instance().install(config);
+#ifdef TTA_HAVE_VIF1_OBSERVER
+        // TTA_VU1_STATS=1 with the adapter: both read each VIF1 transfer (the statistics first).
+        if (std::getenv("TTA_VU1_STATS"))
+            ps2x::native::setVif1Observer([](const uint8_t *stream, size_t bytes) {
+                vu1StatsObserve(stream, bytes);
+                ps2x::native::Vu1StreamAdapter::instance().observe(stream, bytes);
+            });
+#endif
         g_swapDBuffDc = runtime.lookupFunction(kSwapDBuffDc);
         if (g_swapDBuffDc)
             runtime.registerFunction(kSwapDBuffDc, &swapDBuffDc);
         else
             std::cout << "[tta] TTA_NATIVE: no function at sceGsSwapDBuffDc 0x277448, the native frame never ends" << std::endl;
+        g_frameSwap = runtime.lookupFunction(kFrameSwap);
+        if (g_frameSwap)
+            runtime.registerFunction(kFrameSwap, &frameSwap);
         std::cout << "[tta] native renderer: every VU1 program on the sandbox, drawn natively" << std::endl;
 #endif
     }
