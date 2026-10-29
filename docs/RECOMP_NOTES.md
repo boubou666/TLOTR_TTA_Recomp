@@ -253,6 +253,11 @@ layers. What TTA runs by default now (submodule on `tlotr/native`):
   Hot programs in battle (`TTA_VU1_STATS=1`, per 5 s): 8e45395d:0x460 ~20500 (a textured, fogged triangle strip with
   guard-band clipping; its MSCAL only sets up, each batch is drawn by an MSCNT after its V3-32 unpacks), 0x268 ~8000,
   8df1e059:0x10 / 0x190 ~4400 each. Next: translate those into the port's own draws (`Choice::Port`).
+  Default since boots 125-130: two 12-minute runs (Cross every 6 s from 55 s), native (128) and VU1 (129), both reach
+  the battle, Berethor's scene, the Minas Tirith clip and the Scenes menu (Nazgul Agenda 2/109) at the same frame
+  rates; boot 130 runs the defaults to the battle at 19.6 fps. Boot 125 hung once in dlmalloc on a loading screen
+  (pc 0x24FAB8); 127 and 128 with the same script did not, so it is taken as the game's heap race (item 19), still
+  watched. SC3's `sc3/native-gif-q` (Q carried to the GS for perspective UVs) is in. `TTA_NATIVE=0`: the VU1 path.
 
 Boots 55-69 on the way there; boot 69 reaches the title screen with every default and no environment.
 

@@ -1,5 +1,5 @@
-// Native PC rendering for The Third Age (TTA_NATIVE=1): no VU1 program of the game runs on the emulated VU1 or
-// reaches the GS. The fork's generic adapter (ps2x::native::Vu1StreamAdapter) reads every VIF1 stream TTA sends,
+// Native PC rendering for The Third Age (on by default, TTA_NATIVE=0 turns it off): no VU1 program of the game runs
+// on the emulated VU1 or reaches the GS. The fork's generic adapter (ps2x::native::Vu1StreamAdapter) reads every VIF1 stream TTA sends,
 // runs each microprogram on its own VU1 copy (the sandbox) and draws what it sends the GS with the native renderer;
 // DIRECT packets that only draw go the same way. TTA's own programs move to translated code one by one (Choice::Port).
 //
@@ -178,10 +178,12 @@ namespace
 
 namespace tta
 {
+    // On by default (the first battle and what follows it match the VU1 picture at the same speed); TTA_NATIVE=0 runs
+    // the microprograms on the emulated VU1 (AOT-compiled) instead.
     bool nativeEnabled()
     {
         const char *value = std::getenv("TTA_NATIVE");
-        return value && *value == '1';
+        return !value || *value != '0';
     }
 
     void installNative(PS2Runtime &runtime)
