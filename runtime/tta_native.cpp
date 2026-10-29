@@ -14,6 +14,7 @@
 
 #include <cstdlib>
 #include <iostream>
+#include <string>
 
 #if __has_include("runtime/native/native_vu1_stream.h")
 #include "runtime/native/native_vu1_stream.h"
@@ -46,6 +47,85 @@ namespace
 }
 #endif
 
+#if __has_include("runtime/native/native_vif1.h")
+#include "runtime/native/native_vif1.h"
+#include <chrono>
+#include <cstdio>
+#include <map>
+#include <utility>
+
+namespace
+{
+    // TTA_VU1_STATS=1: which VU1 programs the game starts, counted from the VIF1 stream without changing what runs.
+    // Every 5 s: the MSCAL start addresses with the microcode they ran in (a checksum of VU1 code memory as the
+    // stream's MPGs left it), to choose the programs worth translating first.
+    struct Vu1Stats
+    {
+        uint32_t code[4096] = {}; // VU1 micro memory as the MPGs fill it, in words
+        uint32_t codeSum = 0;
+        std::map<std::pair<uint32_t, uint32_t>, uint64_t> calls; // (code checksum, start pc) -> MSCALs
+        std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
+    } g_vu1Stats;
+
+    void vu1StatsObserve(const uint8_t *stream, size_t bytes)
+    {
+        Vu1Stats &st = g_vu1Stats;
+        const uint32_t *words = reinterpret_cast<const uint32_t *>(stream);
+        const size_t count = bytes / 4u;
+        size_t i = 0;
+        while (i < count)
+        {
+            const uint32_t vifcode = words[i++];
+            const uint32_t cmd = (vifcode >> 24) & 0x7Fu, num = (vifcode >> 16) & 0xFFu, imm = vifcode & 0xFFFFu;
+            if ((cmd & 0x60u) == 0x60u)
+            {
+                // UNPACK: num vectors of vn+1 elements of 32 >> vl bits (V4-5: 16 bits each), padded to a word.
+                const uint32_t vn = (cmd >> 2) & 3u, vl = cmd & 3u;
+                const uint32_t n = num ? num : 256u;
+                const uint32_t bits = (vn == 3u && vl == 3u ? 16u : (vn + 1u) * (32u >> vl)) * n; // V4-5: 16 bits
+                i += (bits + 31u) / 32u;
+                continue;
+            }
+            switch (cmd)
+            {
+            case 0x20: i += 1; break;            // STMASK
+            case 0x30: case 0x31: i += 4; break; // STROW, STCOL
+            case 0x4A:                           // MPG
+            {
+                const size_t size = static_cast<size_t>(num ? num : 256u) * 2u;
+                for (size_t w = 0; w < size && i + w < count; ++w)
+                    st.code[(imm * 2u + w) & 4095u] = words[i + w];
+                uint32_t sum = 0;
+                for (uint32_t w = 0; w < 4096u; ++w)
+                    sum = sum * 31u + st.code[w];
+                st.codeSum = sum;
+                i += size;
+                break;
+            }
+            case 0x50: case 0x51: i += static_cast<size_t>(imm ? imm : 65536u) * 4u; break; // DIRECT(HL)
+            case 0x14: case 0x15: ++st.calls[{st.codeSum, imm * 8u}]; break;                  // MSCAL(F)
+            default: break;
+            }
+        }
+        const double seconds = std::chrono::duration<double>(std::chrono::steady_clock::now() - st.start).count();
+        if (seconds >= 5.0)
+        {
+            std::string line;
+            for (const auto &[key, calls] : st.calls)
+            {
+                char item[48];
+                std::snprintf(item, sizeof(item), " %08x:%#x x%llu", key.first, key.second, static_cast<unsigned long long>(calls));
+                line += item;
+            }
+            std::fprintf(stderr, "[tta:vu1] 5 s:%s%c", line.c_str(), 10);
+            st.calls.clear();
+            st.start = std::chrono::steady_clock::now();
+        }
+    }
+}
+#define TTA_HAVE_VIF1_OBSERVER 1
+#endif
+
 namespace tta
 {
     bool nativeEnabled()
@@ -56,6 +136,10 @@ namespace tta
 
     void installNative(PS2Runtime &runtime)
     {
+#ifdef TTA_HAVE_VIF1_OBSERVER
+        if (std::getenv("TTA_VU1_STATS") && !nativeEnabled())
+            ps2x::native::setVif1Observer(&vu1StatsObserve);
+#endif
         if (!nativeEnabled())
             return;
 #ifndef TTA_HAVE_VU1_STREAM

@@ -82,7 +82,8 @@ stubs = [
   "sceMpegAddCallback@0x0027EE68",
   "_sceMpegFlush@0x0027F4A8",
   "memcmp@0x0031CF2C",
-  "rand@0x00320428",
+  # rand (0x00320428) is left to the game: the HLE stub returns the host's std::rand(), which the game's own srand
+  # does not seed (the sequence then differs from the console's and from run to run). FFOP and SC3 did the same.
   "strrchr@0x003218A8",
   "write@0x00328B28",
   "read@0x00328BA8",

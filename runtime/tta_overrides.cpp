@@ -5,6 +5,7 @@
 #include "ps2_runtime.h"
 #include "ps2_recompiled_functions.h"
 
+#include <chrono>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -475,6 +476,23 @@ namespace
         FUN_002b65a8_0x2b65a8(rdram, ctx, runtime);
     }
 
+    // TTA_FPS_LOG=1: the game's frames per second of real time, every 5 s (calls of its frame swap 0x212478).
+    void frameSwapFps(uint8_t *rdram, R5900Context *ctx, PS2Runtime *runtime)
+    {
+        using Clock = std::chrono::steady_clock;
+        static Clock::time_point s_start = Clock::now();
+        static uint32_t s_frames = 0;
+        ++s_frames;
+        const double seconds = std::chrono::duration<double>(Clock::now() - s_start).count();
+        if (seconds >= 5.0)
+        {
+            std::fprintf(stderr, "[tta:fps] %.1f game frames/s over %.1f s%c", s_frames / seconds, seconds, 10);
+            s_frames = 0;
+            s_start = Clock::now();
+        }
+        FUN_00212478_0x212478(rdram, ctx, runtime);
+    }
+
     void applyTta(PS2Runtime &runtime)
     {
         requestExactVu1Flags();
@@ -559,6 +577,8 @@ namespace
             runtime.registerFunction(0x002B6178u, &nodeDestroyTrace);
             runtime.registerFunction(0x002B65A8u, &nodeAddTrace);
         }
+        if (std::getenv("TTA_FPS_LOG"))
+            runtime.registerFunction(0x00212478u, &frameSwapFps);
         if (std::getenv("TTA_TRACE_MPEG") && (g_getPicture = runtime.lookupFunction(0x0027ED48u)))
             runtime.registerFunction(0x0027ED48u, &getPictureTrace);
         if (std::getenv("TTA_TRACE_STRIPS"))
