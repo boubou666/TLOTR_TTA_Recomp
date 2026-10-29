@@ -193,8 +193,14 @@ How the port is brought up, every fix and how it was found, and what remains ope
    Ghidra and the recompiler missed (leaves after a function's padding), now `jal_*` entries in the TOML. Still open.
    Boots 88-92: one run with `PS2X_VU_AOT=0` reached the first battle (Berethor against two Black Riders), but two
    more with the interpreter crashed the same way, and `PS2X_VU0_CHECK=1` showed no data difference between the
-   compiled VU0 microcode and the interpreter: the VU AOT is not the cause. Next suspect: the IOP completes CD reads
-   at once (the completion callback 128 IOP cycles later) where the drive takes milliseconds.
+   compiled VU0 microcode and the interpreter: the VU AOT is not the cause.
+19. Boots 93-101: the cause was the IOP completing TTA's CD reads at once (AUDIOPF's sceCdRead completion callback
+   128 IOP cycles after the call). With a 10 ms completion two runs of two got past the intro; fork
+   `tlotr/iop-cd-timing` models the drive (`PS2X_IOP_CD_SECTORS_PER_SECOND`, `PS2X_IOP_CD_ACCESS_US`; off by default):
+   with 2700 sectors/s and 1 ms access one run in three crashed, with 10 ms access three in three got past it.
+   `applyTta` sets 2700 and 10000 us. Boot 101 (defaults only, three Cross presses) reaches the first battle at ~400 s:
+   Berethor against two Black Riders, the battle menu and hint text clean. The game logic has a race the instant
+   reads exposed; the drive timing hides it the way the console's drive does.
 
 ## Native PC port (2026-10-28 / 29)
 

@@ -483,6 +483,26 @@ namespace
         if (runtime.requestNativeGsRenderer())
             std::cout << "[tta] GS renderer: native (OpenGL)" << std::endl;
         runtime.pinGuestHeap(PS2Runtime::reservedMemoryBase() - kRuntimeHeapBytes, PS2Runtime::reservedMemoryBase());
+        // CD reads that take drive time (fork tlotr/iop-cd-timing; 4x DVD): with reads completing at once the intro
+        // cinematic freed objects still in use, a different crash every run. Read when the first read completes.
+        // A 10 ms access per read: with 1 ms one run in three still crashed; with 10 ms three in three got past the
+        // intro (boots 95-100).
+        if (!std::getenv("PS2X_IOP_CD_SECTORS_PER_SECOND"))
+        {
+#ifdef _WIN32
+            _putenv("PS2X_IOP_CD_SECTORS_PER_SECOND=2700");
+#else
+            setenv("PS2X_IOP_CD_SECTORS_PER_SECOND", "2700", 0);
+#endif
+        }
+        if (!std::getenv("PS2X_IOP_CD_ACCESS_US"))
+        {
+#ifdef _WIN32
+            _putenv("PS2X_IOP_CD_ACCESS_US=10000");
+#else
+            setenv("PS2X_IOP_CD_ACCESS_US", "10000", 0);
+#endif
+        }
         // The IOP modules recompiled to native code by scripts/iop_recomp.sh (generated/iop/), unless
         // PS2X_IOP_NATIVE says otherwise (=0: interpreted, for an A/B). Modules without a recompiled match stay
         // interpreted either way.

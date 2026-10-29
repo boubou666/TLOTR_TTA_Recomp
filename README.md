@@ -37,7 +37,8 @@ Not an emulator: the game's own MIPS R5900 code, rebuilt as a native program on 
 | IOP modules (sound, streaming, pad, memory card) recompiled to C++ | ✅ |
 | Game time and sound on the PC's clock | ✅ |
 | VU1 microprograms translated into native draws | 🔧 |
-| First battle | 🔧 |
+| First battle | ✅ |
+| Battles playable, the first chapter | 🔧 |
 | Sound and music | ⏳ |
 | Memory card | ⏳ |
 | Linux and macOS builds | ⏳ |
@@ -54,9 +55,9 @@ what remains open.
   <img src="docs/screenshots/2026-10-29-first-battle.png" width="400" alt="The first battle: Berethor facing two Black Riders, with the Attack / Taunt Foe / Skip menu, turn portraits and HP">
 </p>
 
-**2026-10-29.** The first battle (Berethor against two Black Riders). Most runs still crash before it, during the
-in-engine intro cinematic (a use after free in the game's objects that changes from run to run, being tracked down);
-this one got through. Some battle text is still garbled.
+**2026-10-29.** The first battle (Berethor against two Black Riders), reached with the defaults only: the native
+OpenGL renderer, the IOP modules recompiled, the game on the PC's clock. What crashed the intro cinematic in most runs
+was CD reads completing at once; they now take drive-like time.
 
 <p align="center">
   <img src="docs/screenshots/2026-10-29-in-engine-forest.png" width="400" alt="An in-engine scene: a dark horse in a misty forest, drawn by the native OpenGL renderer">
