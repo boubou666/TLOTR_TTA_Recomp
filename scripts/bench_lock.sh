@@ -14,7 +14,9 @@ PS2X_BENCH_LOCK_ANNOUNCE="${PS2X_BENCH_LOCK_ANNOUNCE:-}"  # the tool reads it un
 
 case "${1:-status}" in
     take)
+        set +e # the shared tool is not written for set -e (a missing .ask file ends the take half-way)
         bench_lock_take "$NAME" "${2:?minutes}" "${3:?purpose}" "${4:-}"
+        set -e
         echo "took: ${BENCH_LOCK_FILES[*]}" ;;
     release)
         # take and release run in different shells, so release finds our slots by their content.

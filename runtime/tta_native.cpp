@@ -51,6 +51,7 @@ namespace
 #include "runtime/native/native_vif1.h"
 #include <chrono>
 #include <cstdio>
+#include <cstdlib>
 #include <map>
 #include <utility>
 
@@ -99,6 +100,20 @@ namespace
                 for (uint32_t w = 0; w < 4096u; ++w)
                     sum = sum * 31u + st.code[w];
                 st.codeSum = sum;
+                // TTA_VU1_DUMP=<dir>: each code image once, as <dir>/vu1_<checksum>.bin (for tools/vu_disasm.py).
+                static const char *s_dumpDir = std::getenv("TTA_VU1_DUMP");
+                static std::map<uint32_t, bool> s_dumped;
+                if (s_dumpDir && !s_dumped[sum])
+                {
+                    s_dumped[sum] = true;
+                    char path[512];
+                    std::snprintf(path, sizeof(path), "%s/vu1_%08x.bin", s_dumpDir, sum);
+                    if (FILE *file = std::fopen(path, "wb"))
+                    {
+                        std::fwrite(st.code, sizeof(st.code), 1, file);
+                        std::fclose(file);
+                    }
+                }
                 i += size;
                 break;
             }
