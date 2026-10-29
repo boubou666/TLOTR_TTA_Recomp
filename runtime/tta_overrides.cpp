@@ -10,6 +10,7 @@
 #include <cstring>
 #include <iostream>
 #include <string>
+#include <unordered_map>
 
 namespace
 {
@@ -281,6 +282,10 @@ namespace
     // TTA_HEAP_CHECK=1 (bring-up aid): EA's dlmalloc free (0x24FF28, a0 = the heap state, a1 = the block) pushes a
     // small chunk on a fastbin and marks its size word with bit 2. A free of a chunk that already has that mark is a
     // double free: malloc_consolidate (0x2506C0) then loops forever on the fastbin's cycle. Logs it with the callers.
+    // TTA_TRACE_NODES (below): the objects 0x2B6178 destroyed, object -> the destructor's caller; a malloc returning
+    // one of them drops it.
+    std::unordered_map<uint32_t, uint32_t> g_destroyedNodes;
+
     // TTA_HEAP_WATCH=<hex address>: every malloc returning it and every free of it, with the callers on the stack.
     uint32_t heapWatch()
     {
@@ -332,7 +337,34 @@ namespace
             prev = p;
             p += chunk;
         }
-        return p == top ? 0u : p;
+        if (p != top)
+            return p;
+        // The fastbins (state + (size >> 3) * 4 for each small size up to max_fast at state + 4; a chunk links to
+        // the next at chunk + 0xC and has size bit 2 set while on a bin): every node inside the heap, of its bin's
+        // size, marked, and no cycle.
+        const uint32_t state = kEaHeapState + 0x10u, maxFast = rd32(rdram, state + 4u) & ~7u;
+        for (uint32_t bin = 16u; bin <= maxFast && bin <= 0x80u; bin += 8u)
+        {
+            uint32_t slow = rd32(rdram, state + (bin >> 3) * 4u), fast = slow;
+            for (uint32_t steps = 0; fast != 0u && steps < 100000u; ++steps)
+            {
+                const uint32_t word = rd32(rdram, fast + 4u);
+                if (fast < base || fast >= top || (word & ~7u) != bin || !(word & 4u))
+                {
+                    prev = state + (bin >> 3) * 4u;
+                    return fast;
+                }
+                fast = rd32(rdram, fast + 0xCu);
+                if ((steps & 1u) != 0u)
+                    slow = rd32(rdram, slow + 0xCu);
+                if (fast != 0u && fast == slow)
+                {
+                    prev = state + (bin >> 3) * 4u;
+                    return fast; // a cycle
+                }
+            }
+        }
+        return 0u;
     }
 
     struct HeapCall
@@ -367,6 +399,7 @@ namespace
         heapWalkCheck(rdram, ctx, "before", call);
         FUN_0024f780_0x24f780(rdram, ctx, runtime);
         heapWalkCheck(rdram, ctx, "after", call);
+        g_destroyedNodes.erase(getRegU32(ctx, 2)); // a new object at that address
         g_lastHeapCall = call;
         if (heapWatch() != 0u && getRegU32(ctx, 2) == heapWatch())
         {
@@ -411,6 +444,35 @@ namespace
         FUN_0024ff28_0x24ff28(rdram, ctx, runtime);
         heapWalkCheck(rdram, ctx, "after", call);
         g_lastHeapCall = call;
+    }
+
+    // TTA_TRACE_NODES=1 (bring-up aid): the objects with a child array at +0xC0 (data, count +0xC4, capacity +0xC8)
+    // that 0x2B6178 destroys (it walks the children and calls their release) and 0x2B65A8 adds to. Logs an add to an
+    // object already destroyed, or to one whose array data pointer is not a heap address (the use after free that
+    // ends in free(0x48) or a call through a vtable in code on the next scene load).
+
+    void nodeDestroyTrace(uint8_t *rdram, R5900Context *ctx, PS2Runtime *runtime)
+    {
+        g_destroyedNodes[getRegU32(ctx, 4)] = getRegU32(ctx, 31);
+        FUN_002b6178_0x2b6178(rdram, ctx, runtime);
+    }
+
+    void nodeAddTrace(uint8_t *rdram, R5900Context *ctx, PS2Runtime *runtime)
+    {
+        const uint32_t self = getRegU32(ctx, 4), child = getRegU32(ctx, 5);
+        const uint32_t data = rd32(rdram, self + 0xC0u), count = rd32(rdram, self + 0xC4u);
+        const auto destroyed = g_destroyedNodes.find(self);
+        static uint32_t s_reported = 0;
+        if ((destroyed != g_destroyedNodes.end() || (count != 0u && data < 0x00100000u)) && s_reported++ < 20u)
+        {
+            std::fprintf(stderr, "[tta:nodes] add 0x%x to 0x%x (vtable 0x%x, children data 0x%x count %u cap 0x%x)%s ra=0x%x callers:",
+                         child, self, rd32(rdram, self + 4u), data, count, rd32(rdram, self + 0xC8u),
+                         destroyed != g_destroyedNodes.end() ? " ALREADY DESTROYED" : "", getRegU32(ctx, 31));
+            if (destroyed != g_destroyedNodes.end())
+                std::fprintf(stderr, " [destroyed from 0x%x]", destroyed->second);
+            logCallers(rdram, ctx);
+        }
+        FUN_002b65a8_0x2b65a8(rdram, ctx, runtime);
     }
 
     void applyTta(PS2Runtime &runtime)
@@ -470,8 +532,13 @@ namespace
         }
         if (std::getenv("TTA_HEAP_CHECK") || heapWatch() || heapWalkEnabled())
             runtime.registerFunction(0x0024FF28u, &heapFreeCheck);
-        if (heapWatch() || heapWalkEnabled())
+        if (heapWatch() || heapWalkEnabled() || std::getenv("TTA_TRACE_NODES"))
             runtime.registerFunction(0x0024F780u, &heapMallocWatch);
+        if (std::getenv("TTA_TRACE_NODES"))
+        {
+            runtime.registerFunction(0x002B6178u, &nodeDestroyTrace);
+            runtime.registerFunction(0x002B65A8u, &nodeAddTrace);
+        }
         if (std::getenv("TTA_TRACE_MPEG") && (g_getPicture = runtime.lookupFunction(0x0027ED48u)))
             runtime.registerFunction(0x0027ED48u, &getPictureTrace);
         if (std::getenv("TTA_TRACE_STRIPS"))

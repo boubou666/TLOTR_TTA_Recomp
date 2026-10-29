@@ -71,7 +71,10 @@ def main():
             shutil.copyfile(origin, target)
             changed += 1
 
+    # generated/iop/ comes from scripts/iop_recomp.sh, not from the EE recompiler: never dropped here.
     for relative in walk_files(destination) - wanted:
+        if relative.split(os.sep)[0] == 'iop' or relative.split('/')[0] == 'iop':
+            continue
         os.remove(os.path.join(destination, relative))
         changed += 1
     for directory, _, _ in sorted(os.walk(destination), key=lambda item: -len(item[0])):

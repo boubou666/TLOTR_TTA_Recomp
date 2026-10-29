@@ -184,6 +184,13 @@ How the port is brought up, every fix and how it was found, and what remains ope
    not inside the allocator), `TTA_TRACE_MPEG=1` (GetPicture's buffer is 1024 macroblocks, enough for 512 x 448).
    Fork `tlotr/mpeg-nodata-caller`: the Nodata callback runs on GetPicture's thread (it frees game memory; as a
    queued invocation it could cut into another thread's malloc). Right on its own, not the cause here.
+   Boots 79-87: runs are not reproducible even with the EE clock, `PS2X_PAD_CLOCK=ee` and `PS2X_GS_SYNC=1`, but the
+   crash always comes ~110-120 s in, during the in-engine intro cinematic (letterboxed forest), not on a load. The
+   fastbin check caught `free(0x48)`: a child vector at +0xC0 of an object of the 0x2B6178 / 0x2B65A8 family held
+   data 0x38 (the object was already destroyed; 0x2BA268 destroys them, 0x2C123C adds children to them later).
+   Pressing nothing after the menus changes nothing. A 10 ms IOP CD completion (the HLE completes in 128 cycles)
+   moved the crash to a JAL into code with no function: the scan of every JAL in the executable found 10 targets
+   Ghidra and the recompiler missed (leaves after a function's padding), now `jal_*` entries in the TOML. Still open.
 
 ## Native PC port (2026-10-28 / 29)
 

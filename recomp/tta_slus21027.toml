@@ -979,6 +979,18 @@ entry_points = [
   "ptr_00348CA8@0x00348CA8", # 1 ref(s), first at 0x00384EEC
   "ptr_00348CB0@0x00348CB0", # 1 ref(s), first at 0x00384ED4
   "ptr_00348CB8@0x00348CB8", # 1 ref(s), first at 0x00384EBC
+  # --- JAL targets with no function (leaves after a function end and its padding; Ghidra missed them). Boot 86
+  # stopped at 0x001EF4F8 (JAL from 0x00333244). Listed by scanning every JAL of the executable segments.
+  "jal_0015EAA8@0x0015EAA8", # JAL from 0x00162DA0
+  "jal_00164488@0x00164488", # JAL from 0x00162DFC
+  "jal_001644C8@0x001644C8", # JAL from 0x00162E54
+  "jal_00164508@0x00164508", # JAL from 0x00162E34
+  "jal_00164548@0x00164548", # JAL from 0x00162E44
+  "jal_001DD5F0@0x001DD5F0", # JAL from 0x001DD6B4
+  "jal_001EF4F8@0x001EF4F8", # JAL from 0x00333244
+  "jal_001EF508@0x001EF508", # JAL from 0x0033326C
+  "jal_002C2824@0x002C2824", # JAL from 0x0037C934
+  "jal_0030300C@0x0030300C", # JAL from 0x0035BDC0
   # --- Analyzer output below
   "_$_9type_info@0x001C4280",
   "sceMc2Sync@0x001D6AB0",
