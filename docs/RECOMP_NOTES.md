@@ -191,6 +191,10 @@ How the port is brought up, every fix and how it was found, and what remains ope
    Pressing nothing after the menus changes nothing. A 10 ms IOP CD completion (the HLE completes in 128 cycles)
    moved the crash to a JAL into code with no function: the scan of every JAL in the executable found 10 targets
    Ghidra and the recompiler missed (leaves after a function's padding), now `jal_*` entries in the TOML. Still open.
+   Boots 88-92: one run with `PS2X_VU_AOT=0` reached the first battle (Berethor against two Black Riders), but two
+   more with the interpreter crashed the same way, and `PS2X_VU0_CHECK=1` showed no data difference between the
+   compiled VU0 microcode and the interpreter: the VU AOT is not the cause. Next suspect: the IOP completes CD reads
+   at once (the completion callback 128 IOP cycles later) where the drive takes milliseconds.
 
 ## Native PC port (2026-10-28 / 29)
 

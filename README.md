@@ -32,12 +32,12 @@ Not an emulator: the game's own MIPS R5900 code, rebuilt as a native program on 
 | Loading: CD reads from the disc files | ✅ |
 | Memory card check, legal screen | ✅ |
 | Movies, title screen | ✅ |
-| Menus | 🔧 |
+| Menus, New Game, the intro cinematic | ✅ |
 | No GS emulation: the GS stream drawn by the native OpenGL renderer (no paraLLEl-GS) | ✅ |
 | IOP modules (sound, streaming, pad, memory card) recompiled to C++ | ✅ |
 | Game time and sound on the PC's clock | ✅ |
 | VU1 microprograms translated into native draws | 🔧 |
-| First battle | ⏳ |
+| First battle | 🔧 |
 | Sound and music | ⏳ |
 | Memory card | ⏳ |
 | Linux and macOS builds | ⏳ |
@@ -49,6 +49,14 @@ Not an emulator: the game's own MIPS R5900 code, rebuilt as a native program on 
 what remains open.
 
 ## Screenshots
+
+<p align="center">
+  <img src="docs/screenshots/2026-10-29-first-battle.png" width="400" alt="The first battle: Berethor facing two Black Riders, with the Attack / Taunt Foe / Skip menu, turn portraits and HP">
+</p>
+
+**2026-10-29.** The first battle (Berethor against two Black Riders). Most runs still crash before it, during the
+in-engine intro cinematic (a use after free in the game's objects that changes from run to run, being tracked down);
+this one got through. Some battle text is still garbled.
 
 <p align="center">
   <img src="docs/screenshots/2026-10-29-in-engine-forest.png" width="400" alt="An in-engine scene: a dark horse in a misty forest, drawn by the native OpenGL renderer">
