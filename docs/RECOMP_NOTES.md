@@ -172,18 +172,35 @@ How the port is brought up, every fix and how it was found, and what remains ope
    the end. Boot 54 reaches the title screen (New Game / Load Game / More); the attract movie plays and returns to it.
    Mind the MPEG HLE's logs: GetPicture's lines stop after 32 on purpose, frame 31 is not where decoding stops.
 
-## Native PC rendering (2026-10-28)
+## Native PC port (2026-10-28 / 29)
 
-The goal, shared with TMB and VP2S: no PS2 emulation left. Fork `docs/native.md` (on `native/renderer`) has the
-layers. First step for TTA: every VU1 program drawn natively without translating any yet.
+The goal, shared with TMB, VP2S and JC2: no PS2 emulation left. Fork `docs/native.md` (on `native/renderer`) has the
+layers. What TTA runs by default now (submodule on `tlotr/native`):
 
-- Fork `native/vu1-stream` (written for TTA, TMB and JC2 will use it): `ps2x::native::Vu1StreamAdapter` mirrors VU1
-  memory from every VIF1 stream, runs each microprogram on the fork's `Vu1Sandbox` (its own VU1, whose XGKICK output
-  `GifToNative` draws with the native renderer) or hands it to the port (`Choice::Port`), and owns the VU1 / DIRECT
-  gate decisions. `runtime/tta_native.cpp` installs it with `TTA_NATIVE=1`; the frame ends in the frame swap
-  0x212478; the screen is assumed 640 x 448 centred on 2048 (sceGsSetDefDBuffDc), to check.
-- Next: TTA's main VU1 programs translated one by one into native code (`Choice::Port`), the frame loop on real
-  time, the IOP modules recompiled (`tools/iop_recomp.py`) with sound on the wall clock.
+- **GS: GSNativeBackend** (OpenGL, VP2S's `native/gs-backend`), chosen by `applyTta` through
+  `PS2Runtime::requestNativeGsRenderer` (fork `tlotr/native-gs-request`; `PS2X_GS_RENDERER` still overrides). No
+  paraLLEl-GS. It draws the movies, the title screen and its off-screen passes (a 512 x 448 picture composed from
+  targets at FBP 0x1C0 and 0x100). Three fixes were needed: a first draw that is native recorded no GS thread (no GL
+  context, null targets), frames narrower than 640 failed the host copy (magenta), both now on `native/gs-backend`;
+  and TTA draws its movie pictures with the undefined PSM 0x20, which the front end now reads as PSMCT32 (fork
+  `tlotr/gs-unknown-psm`; the CPU renderer showed them magenta).
+- **IOP: the eight IRX recompiled to C++** (`scripts/iop_recomp.sh`, the fork's `tools/iop_recomp.py` with pointer
+  seeds: `jc2/iop-recomp-scan`, written with JC2): AUDIOPF 394 functions, LIBSD 59, SIO2MAN 49, SIO2D 26, DS2U_D 45,
+  MCMAN 199, MCSERV 24, DBCMAN 73, none interpreted. AUDIOPF's SIF handlers (0x627FC, 0x6282C) and worker (0x62858)
+  are only passed as pointers, so the tool's entry/export/JAL walk had missed them. `PS2X_IOP_NATIVE` is read per
+  module load (fork `tlotr/iop-native-late`) and `applyTta` sets it (=0 for an interpreted A/B).
+- **Time: COP0 Count on the host clock** (fork `tlotr/cop0-wallclock`, `PS2Runtime::setCop0WallClock`). TTA does
+  not count vblanks: its main loop 0x1C3588 takes the frame step in ms from MFC0 Count (factor 1000 / 294912000) and
+  then spins on Count until 1/60 s has passed (0x1C37C0). With Count on the host clock its engine and its limiter run
+  on real time with no override of its loop. `TTA_WALLCLOCK=0` gives the emulated EE clock back.
+- **Sound and IOP timers on the host clock**: `scripts/run.sh` exports `PS2X_SPU2_WALLCLOCK=1` and
+  `PS2X_IOP_WALLCLOCK=1` (the SPU2 reads its switch before the override runs).
+- **VU1**: the microprograms run AOT-compiled (C++). `TTA_NATIVE=1` instead runs them on the fork's generic
+  `Vu1StreamAdapter` (`native/vu1-stream`, written for TTA; TMB and JC2 adopt it), whose sandbox and GifToNative ignore
+  FRAME/ZBUF set inside XGKICK packets: TTA renders off-screen passes that way, so its frame comes out black on the
+  GL backend. TTA uses six VU1 programs (0x0, 0x620, 0x1968, 0x1B80, 0x1E68, 0x1EA8); next is translating them.
+
+Boots 55-69 on the way there; boot 69 reaches the title screen with every default and no environment.
 
 ## Open
 

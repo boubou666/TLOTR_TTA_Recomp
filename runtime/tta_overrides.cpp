@@ -271,11 +271,22 @@ namespace
         if (runtime.requestNativeGsRenderer())
             std::cout << "[tta] GS renderer: native (OpenGL)" << std::endl;
         runtime.pinGuestHeap(PS2Runtime::reservedMemoryBase() - kRuntimeHeapBytes, PS2Runtime::reservedMemoryBase());
+        // The IOP modules recompiled to native code by scripts/iop_recomp.sh (generated/iop/), unless
+        // PS2X_IOP_NATIVE says otherwise (=0: interpreted, for an A/B). Modules without a recompiled match stay
+        // interpreted either way.
+        if (!std::getenv("PS2X_IOP_NATIVE"))
+        {
+#ifdef _WIN32
+            _putenv("PS2X_IOP_NATIVE=1");
+#else
+            setenv("PS2X_IOP_NATIVE", "1", 0);
+#endif
+        }
         tta::installNative(runtime);
-        // TTA_WALLCLOCK=1: COP0 Count on the host clock. TTA times its frames with Count (0x1C3588: the step in ms
-        // from Count, 1000 / 294912000 per tick, and a spin until 1/60 s of Count has passed), so the game then runs
-        // on real time instead of the emulated EE clock.
-        if (const char *wall = std::getenv("TTA_WALLCLOCK"); wall && *wall == '1')
+        // COP0 Count on the host clock (TTA_WALLCLOCK=0: the emulated EE clock). TTA times its frames with Count
+        // (0x1C3588: the step in ms from Count, 1000 / 294912000 per tick, then a spin until 1/60 s of Count has
+        // passed), so its engine and its frame limiter run on real time, not on the emulated EE's cycles.
+        if (const char *wall = std::getenv("TTA_WALLCLOCK"); !wall || *wall != '0')
         {
             runtime.setCop0WallClock(true);
             std::cout << "[tta] COP0 Count on the host clock" << std::endl;

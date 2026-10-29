@@ -33,7 +33,10 @@ Not an emulator: the game's own MIPS R5900 code, rebuilt as a native program on 
 | Memory card check, legal screen | ✅ |
 | Movies, title screen | ✅ |
 | Menus | 🔧 |
-| Native PC rendering: every VU1 program drawn by the native renderer, then translated (no PS2 emulation left) | 🔧 |
+| No GS emulation: the GS stream drawn by the native OpenGL renderer (no paraLLEl-GS) | ✅ |
+| IOP modules (sound, streaming, pad, memory card) recompiled to C++ | ✅ |
+| Game time and sound on the PC's clock | ✅ |
+| VU1 microprograms translated into native draws | 🔧 |
 | First battle | ⏳ |
 | Sound and music | ⏳ |
 | Memory card | ⏳ |
