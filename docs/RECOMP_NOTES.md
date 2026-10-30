@@ -271,6 +271,12 @@ layers. What TTA runs by default now (submodule on `tlotr/native`):
   logo films played at 2.8 fps (boots 134-138; the frame swap's flag at 0x36F35C is 0 in game too, so it cannot tell
   them apart). A frame is a movie's while sceMpegGetPicture (0x27ED48) was called in the last half second. Boot 140:
   movies at 15, menus up to 60, in-engine 35-41 (was held at 30), battle 26 (was 19.9).
+- **No CPU copy of GS memory** (`TTA_TEXTURE_CACHE=1` brings it back): `TTA_HOST_PROFILE=<file>` (a sampler of
+  host instruction pointers, `runtime/tta_host_profile.cpp`) put a third of the busy thread's battle time in the
+  native renderer's texture cache (`TextureCache::uploadLocked`, `GSMem::WriteP8` / `WriteCT32`), a copy of every
+  texture upload that no TTA draw reads since they all take the GL back end's textures (`gsWrites`). Off with
+  `setUploadsWanted(false)`: boot 145 battle 28.2 fps (was 25.0), same pictures. `TTA_VU1_THREAD=1` (the adapter on
+  the VIF1 thread) is slower there, 25.4, and stays off.
 
 Boots 55-69 on the way there; boot 69 reaches the title screen with every default and no environment.
 

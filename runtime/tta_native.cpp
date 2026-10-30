@@ -342,6 +342,12 @@ namespace tta
             };
         }
         ps2x::native::Vu1StreamAdapter::instance().install(config);
+        // Every native draw of TTA goes to the GS front end (gsWrites, the C++ programs' fromGsContext batches), whose GL
+        // renderer keeps its own textures: the native renderer's copy of GS memory (TextureCache, filled at each upload
+        // on the GS front end's thread) is never read, and kept it was about a third of that thread's time in battle
+        // (TTA_HOST_PROFILE, boot 144). TTA_TEXTURE_CACHE=1 keeps it.
+        if (const char *cache = std::getenv("TTA_TEXTURE_CACHE"); !cache || *cache != '1')
+            ps2x::native::setUploadsWanted(false);
 #ifdef TTA_HAVE_VIF1_OBSERVER
         // TTA_VU1_STATS=1 with the adapter: both read each VIF1 transfer (the statistics first).
         if (std::getenv("TTA_VU1_STATS"))

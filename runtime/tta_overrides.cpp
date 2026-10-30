@@ -2,6 +2,7 @@
 
 #include "game_overrides.h"
 #include "tta_native.h"
+#include "tta_host_profile.h"
 #include "ps2_runtime.h"
 #include "ps2_recompiled_functions.h"
 
@@ -637,6 +638,8 @@ namespace
             runtime.registerFunction(0x00218FB8u, &stripTrace);
             runtime.registerFunction(0x002C9A08u, &meshTrace);
         }
+        if (const char *profile = std::getenv("TTA_HOST_PROFILE"); profile && *profile)
+            tta::startHostProfile(profile);
         tta::installNative(runtime); // last: it wraps what is registered at the frame swap
         std::cout << "[tta] The Third Age (NTSC-U SLUS-21027) overrides applied" << std::endl;
     }
