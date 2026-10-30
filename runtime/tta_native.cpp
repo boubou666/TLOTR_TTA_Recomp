@@ -8,10 +8,14 @@
 // TTA_NATIVE_LOG=1 turns on the adapter's statistics (programs drawn natively per start address, per 250 frames).
 
 #include "tta_native.h"
+#include "tta_vu1_port.h"
 
 #include "ps2_recompiled_functions.h"
 #include "ps2_runtime.h"
+#include "runtime/ee_scheduler.h"
 
+#include <algorithm>
+#include <chrono>
 #include <cstdio>
 #include <cstdlib>
 #include <iostream>
@@ -30,22 +34,112 @@ namespace
 
     // The game's own frame swap: it calls sceGsSwapDBuffDc only with a0 = 0 (not in game), so the frame ends here.
     constexpr uint32_t kFrameSwap = 0x00212478u;
+    constexpr uint32_t kFrameSwapFlipReturn = 0x002124D0u; // after the frame swap's own sceGsSwapDBuffDc
     PS2Runtime::RecompiledFunction g_frameSwap = nullptr;
-    bool g_inFrameSwap = false;
 
     void swapDBuffDc(uint8_t *rdram, R5900Context *ctx, PS2Runtime *runtime)
     {
+        const bool movie = getRegU32(ctx, 31) != kFrameSwapFlipReturn; // the movie player flips on its own
         g_swapDBuffDc(rdram, ctx, runtime);
-        if (!g_inFrameSwap) // the movie player's flips
+        if (movie)
             ps2x::native::Vu1StreamAdapter::instance().frameEnd();
+    }
+
+    // Native frame loop (on by default, TTA_NATIVE_LOOP=0 keeps the vblank pacing): in game, frames are paced by the
+    // host's clock, not by the emulated vblanks. The frame swap's vblank wait (its sceGsSyncV) waits for the next
+    // frame deadline of the runtime's frame cap (PS2X_FRAME_CAP, default 60) on the host clock instead, with the
+    // other guest threads running meanwhile (and the swap itself when it has no wait). At the deadline the EE is charged the real time the frame took (its
+    // timers and the IOP keep up) and the frame is shown: vblanks no longer latch it (EeScheduler::setNativeFrames).
+    // TTA's engine already steps on COP0 Count, which runs on the host clock. Movies keep the vblank wait
+    // (sceGsSyncV, 0x2764F0) for now, see kMpegGetPicture.
+    constexpr uint32_t kSyncV = 0x002764F0u;
+    constexpr uint32_t kFrameSwapSyncVReturn = 0x002124B0u; // after the frame swap's own sceGsSyncV
+    PS2Runtime::RecompiledFunction g_syncV = nullptr;       // the vblank wait it replaces
+    constexpr double kEeClockHz = 294912000.0;
+    bool g_nativeLoop = false;
+    bool g_waitedThisFrame = false;
+    // Movies keep the vblank pacing for now: their pictures come from the MPEG HLE (sceMpegGetPicture, 0x27ED48),
+    // which presents on EE-time vsync ticks, and with native frames the logo films ran at 2.8 fps instead of 15
+    // (boots 134, 136, 137). A frame is a movie's while a picture was asked for in the last half second.
+    constexpr uint32_t kMpegGetPicture = 0x0027ED48u;
+    PS2Runtime::RecompiledFunction g_getPicture = nullptr;
+    std::chrono::steady_clock::time_point g_lastPicture{};
+    bool g_nativeFrame = false; // this frame is paced by the host
+
+    void getPicture(uint8_t *rdram, R5900Context *ctx, PS2Runtime *runtime)
+    {
+        g_lastPicture = std::chrono::steady_clock::now(); // before: the call may suspend the thread
+        g_getPicture(rdram, ctx, runtime);
+    }
+
+    std::chrono::steady_clock::time_point nextDeadline(PS2Runtime *runtime)
+    {
+        static auto s_next = std::chrono::steady_clock::now();
+        const uint32_t cap = runtime->framePacer().cap();
+        const auto now = std::chrono::steady_clock::now();
+        s_next = cap == 0u ? now
+                           : std::max(now, s_next + std::chrono::duration_cast<std::chrono::steady_clock::duration>(
+                                                        std::chrono::duration<double>(1.0 / cap)));
+        return s_next;
+    }
+
+    void frameWake(PS2Runtime *runtime)
+    {
+        EeScheduler &scheduler = runtime->eeScheduler();
+        static uint64_t s_lastCycle = scheduler.currentCycle();
+        static auto s_last = std::chrono::steady_clock::now();
+        const auto woke = std::chrono::steady_clock::now();
+        const double seconds = std::min(0.1, std::chrono::duration<double>(woke - s_last).count());
+        s_last = woke;
+        const uint64_t accounted = scheduler.currentCycle() - s_lastCycle;
+        const uint64_t real = static_cast<uint64_t>(seconds * kEeClockHz);
+        if (real > accounted)
+            scheduler.accountCycles(static_cast<uint32_t>(std::min<uint64_t>(real - accounted, 0xFFFFFFFFu)));
+        s_lastCycle = scheduler.currentCycle();
+        scheduler.presentGuestFrame();
+    }
+
+    void nativeSyncV(uint8_t *rdram, R5900Context *ctx, PS2Runtime *runtime)
+    {
+        const uint32_t ra = getRegU32(ctx, 31);
+        // The movie player's and the loading screens' waits poll for work the IOP finishes (a CD read): on the host
+        // clock the IOP only catches up at each wake-up, and those loops ran 1.5x (movies) to 20x (loads) slower
+        // (boots 134, 136). They keep the vblank wait for now; only the frame swap's is the frame deadline.
+        if (ra != kFrameSwapSyncVReturn || !g_nativeFrame)
+        {
+            g_syncV(rdram, ctx, runtime);
+            return;
+        }
+        g_waitedThisFrame = true;
+        runtime->eeScheduler().waitHostDeadline(
+            nextDeadline(runtime), [runtime] { frameWake(runtime); },
+            [runtime, ra](R5900Context &resume)
+            {
+                // The field (CSR.FIELD) as sceGsSyncV returns it: the vblanks still run on EE time.
+                setReturnU32(&resume, static_cast<uint32_t>((runtime->memory().gs().csr.load() >> 13) & 1u));
+                resume.pc = ra;
+            });
     }
 
     void frameSwap(uint8_t *rdram, R5900Context *ctx, PS2Runtime *runtime)
     {
-        g_inFrameSwap = true;
-        g_frameSwap(rdram, ctx, runtime);
-        g_inFrameSwap = false;
+        // The frame's draws are all sent: its native frame ends here. (The swap's own sceGsSyncV, with the native
+        // loop, suspends the thread and resumes it inside the swap: nothing after the call below runs then.)
         ps2x::native::Vu1StreamAdapter::instance().frameEnd();
+        g_waitedThisFrame = false;
+        if (g_nativeLoop)
+        {
+            const bool inGame = std::chrono::steady_clock::now() - g_lastPicture > std::chrono::milliseconds(500);
+            if (inGame != g_nativeFrame)
+                runtime->eeScheduler().setNativeFrames(inGame);
+            g_nativeFrame = inGame;
+        }
+        g_frameSwap(rdram, ctx, runtime);
+        if (!g_nativeFrame || g_waitedThisFrame)
+            return;
+        const uint32_t ret = ctx->pc;
+        runtime->eeScheduler().waitHostDeadline(nextDeadline(runtime), [runtime] { frameWake(runtime); },
+                                                [ret](R5900Context &resume) { resume.pc = ret; });
     }
 
     // TTA draws a 512 x 448 picture (sceGsSetDefDBuffDc; the GS frame shows it 512 pixels wide), centred on the
@@ -210,8 +304,19 @@ namespace tta
         config.screen = screen();
         // TTA draws into its own targets and textures from them: the GL GS renderer draws the sandbox's packets.
         config.gsWrites = true;
+        // The programs TTA draws in C++ (tta_vu1_port.cpp: 0x460 and 0x268 of its 3D image); the others on the sandbox.
+        // TTA_VU1_PORT=0 leaves them all on the sandbox.
+        const char *port = std::getenv("TTA_VU1_PORT");
+        if (!port || *port != '0')
+        {
+            config.choose = [](ps2x::native::Vu1StreamAdapter &adapter, uint32_t startPc) {
+                return tta::vu1PortProgram(adapter.code(), startPc) ? ps2x::native::Vu1StreamAdapter::Choice::Port
+                                                                    : ps2x::native::Vu1StreamAdapter::Choice::Sandbox;
+            };
+            config.draw = &tta::vu1PortDraw;
+        }
         // TTA_VU1_SNAP=<dir>: VU1 data memory at some MSCALs of 0x460 and 0x268 (the hot programs), as
-        // <dir>/snap_<pc>_<n>_top<TOP>.bin, to read their input layout; the programs still run on the sandbox.
+        // <dir>/snap_<pc>_<n>_top<TOP>.bin, to read their input layout; the programs run on the sandbox.
         if (const char *snapDir = std::getenv("TTA_VU1_SNAP"))
         {
             const std::string dir = snapDir;
@@ -249,7 +354,18 @@ namespace tta
         g_frameSwap = runtime.lookupFunction(kFrameSwap);
         if (g_frameSwap)
             runtime.registerFunction(kFrameSwap, &frameSwap);
-        std::cout << "[tta] native renderer: every VU1 program on the sandbox, drawn natively" << std::endl;
+        if (const char *loop = std::getenv("TTA_NATIVE_LOOP"); (!loop || *loop != '0') && g_frameSwap)
+        {
+            g_nativeLoop = true;
+            if ((g_syncV = runtime.lookupFunction(kSyncV)))
+                runtime.registerFunction(kSyncV, &nativeSyncV);
+            if ((g_getPicture = runtime.lookupFunction(kMpegGetPicture)))
+                runtime.registerFunction(kMpegGetPicture, &getPicture);
+            std::cout << "[tta] native loop: frames paced by the host clock (cap " << runtime.framePacer().cap()
+                      << " fps, 0 = unlimited), no vblank pacing" << std::endl;
+        }
+        std::cout << "[tta] native renderer: VU1 programs 0x460 / 0x268 in C++" << (config.draw ? "" : " (off)")
+                  << ", the others on the sandbox, all drawn natively" << std::endl;
 #endif
     }
 }

@@ -258,6 +258,19 @@ layers. What TTA runs by default now (submodule on `tlotr/native`):
   rates; boot 130 runs the defaults to the battle at 19.6 fps. Boot 125 hung once in dlmalloc on a loading screen
   (pc 0x24FAB8); 127 and 128 with the same script did not, so it is taken as the game's heap race (item 19), still
   watched. SC3's `sc3/native-gif-q` (Q carried to the GS for perspective UVs) is in. `TTA_NATIVE=0`: the VU1 path.
+- **VU1 0x460 and 0x268 in C++** (`runtime/tta_vu1_port.cpp`, the adapter's `Choice::Port`, matched by the FNV-1a
+  of their code): the matrix at VU 0-3 maps straight to GS screen coordinates, Q = 1 / w, the colour from the table
+  at VU 136 + index, F = min(129.w * Q, 255), bit 15 of the index the ADC; the triangles go to the GL back end with
+  the header's A+D writes (`gsWrites`) and are clipped to the near plane in C++ (the VU's guard-band pass, 0x830,
+  is the GPU's job). The first try (boot 132) took vf5 / vf6 (VU 125 / 126) for the screen mapping: they are only
+  0x460's clip-test space, and the battle came out as streaks. Boot 140: the battle matches, at 26 fps.
+- **Frame loop on the PC's clock** (`TTA_NATIVE_LOOP=0` for the vblank pacing): the frame swap's sceGsSyncV
+  (return 0x2124B0) becomes `EeScheduler::waitHostDeadline` (fork `native/frame-sleep`) to the frame cap's next
+  deadline, then `accountCycles` for the real time and `presentGuestFrame`, with `setNativeFrames(true)`, as VP2S
+  and JC2 do. Movies keep the vblank wait: the MPEG HLE presents on EE-time vsync ticks, and with native frames the
+  logo films played at 2.8 fps (boots 134-138; the frame swap's flag at 0x36F35C is 0 in game too, so it cannot tell
+  them apart). A frame is a movie's while sceMpegGetPicture (0x27ED48) was called in the last half second. Boot 140:
+  movies at 15, menus up to 60, in-engine 35-41 (was held at 30), battle 26 (was 19.9).
 
 Boots 55-69 on the way there; boot 69 reaches the title screen with every default and no environment.
 

@@ -47,8 +47,9 @@ Not an emulator: the game's own code (EE, IOP modules, VU microcode) rebuilt as 
 | IOP modules (sound, streaming, pad, memory card) recompiled to C++, none interpreted | ✅ |
 | Game time, sound and IOP on the PC's clock | ✅ |
 | VU1 off the emulated VU1: every microprogram run by the native port and drawn by the OpenGL renderer (default; `TTA_NATIVE=0` for the VU1 path) | ✅ |
+| The two hottest VU1 programs (the 3D strips, 0x460 and 0x268) translated to C++, no VU at all (`TTA_VU1_PORT=0`: sandbox) | ✅ |
 | VU1 microprograms translated into native draws | 🔧 |
-| Frame loop on real time (frame cap of the player's choice) | ⏳ |
+| Frame loop on the PC's clock in game and menus (`PS2X_FRAME_CAP`, default 60; movies still on the vblank) | 🔧 |
 
 ✅ works · 🔧 in progress · ⏳ not reached yet
 

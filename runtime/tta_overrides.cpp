@@ -6,6 +6,7 @@
 #include "ps2_recompiled_functions.h"
 
 #include <chrono>
+#include <map>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -476,6 +477,35 @@ namespace
         FUN_002b65a8_0x2b65a8(rdram, ctx, runtime);
     }
 
+    // TTA_TRACE_SYNCV=1: sceGsSyncV's calls (0x2764F0, the vblank wait) per caller every 5 s, with the time spent in
+    // them: which of the game's paths paces its frames on the emulated vblank.
+    PS2Runtime::RecompiledFunction g_syncV = nullptr;
+    void syncVTrace(uint8_t *rdram, R5900Context *ctx, PS2Runtime *runtime)
+    {
+        static std::map<uint32_t, std::pair<uint64_t, double>> s_byCaller;
+        static auto s_since = std::chrono::steady_clock::now();
+        const uint32_t ra = getRegU32(ctx, 31);
+        const auto start = std::chrono::steady_clock::now();
+        g_syncV(rdram, ctx, runtime);
+        const auto end = std::chrono::steady_clock::now();
+        auto &entry = s_byCaller[ra];
+        ++entry.first;
+        entry.second += std::chrono::duration<double, std::milli>(end - start).count();
+        if (end - s_since >= std::chrono::seconds(5))
+        {
+            std::string line;
+            for (const auto &[caller, value] : s_byCaller)
+            {
+                char item[64];
+                std::snprintf(item, sizeof(item), " %#x x%llu %.0f ms", caller, static_cast<unsigned long long>(value.first), value.second);
+                line += item;
+            }
+            std::fprintf(stderr, "[tta:syncv] 5 s:%s%c", line.c_str(), 10);
+            s_byCaller.clear();
+            s_since = end;
+        }
+    }
+
     // TTA_FPS_LOG=1: the game's frames per second of real time, every 5 s (calls of its frame swap 0x212478).
     void frameSwapFps(uint8_t *rdram, R5900Context *ctx, PS2Runtime *runtime)
     {
@@ -596,6 +626,8 @@ namespace
         }
         if (const char *skip = std::getenv("TTA_SKIP_VBLANK_SPIN"); !skip || *skip != '0')
             runtime.registerFunction(0x00212628u, &vblankSpinTarget);
+        if (std::getenv("TTA_TRACE_SYNCV") && (g_syncV = runtime.lookupFunction(0x002764F0u)))
+            runtime.registerFunction(0x002764F0u, &syncVTrace);
         if (std::getenv("TTA_FPS_LOG"))
             runtime.registerFunction(0x00212478u, &frameSwapFps);
         if (std::getenv("TTA_TRACE_MPEG") && (g_getPicture = runtime.lookupFunction(0x0027ED48u)))
