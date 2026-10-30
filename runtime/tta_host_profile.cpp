@@ -1,7 +1,9 @@
 // TTA_HOST_PROFILE=<file>: where the PC's time goes, by host instruction address. A host thread samples every thread
-// of the process each millisecond (suspend, read the instruction pointer, resume) and every 10 s appends to <file> the
-// busiest threads and, for each, its 40 most sampled addresses as offsets into the runner's image (resolve them with
-// addr2line -f -C -e ps2EntryRunner.debug 0x140000000+offset). Windows only.
+// of the process each millisecond (suspend, read the instruction pointer, resume) and every 10 s appends to <file>
+// each thread's CPU time (QueryThreadCycleTime, the driver's threads too) and, for the busiest six, the 40 most
+// sampled addresses as offsets into the image (resolve them with addr2line -f -C -e ps2EntryRunner.debug
+// 0x140000000+offset; bit 62 set: waiting outside the image, called from there) and "waits a>b>c>d" lines, the first
+// four return addresses into the image found on a waiting thread's stack. Windows only.
 
 #include "tta_host_profile.h"
 
@@ -10,6 +12,7 @@
 #include <tlhelp32.h>
 
 #include <algorithm>
+#include <array>
 #include <chrono>
 #include <cstdio>
 #include <map>
@@ -25,7 +28,11 @@ namespace
         const uintptr_t base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
         const DWORD self = GetCurrentThreadId();
         std::unordered_map<DWORD, std::unordered_map<uintptr_t, uint32_t>> samples; // thread -> offset -> count
-        std::unordered_map<DWORD, uint32_t> totals;
+        std::unordered_map<DWORD, std::map<std::array<uintptr_t, 4>, uint32_t>> waits; // thread -> callers -> count
+        std::unordered_map<DWORD, ULONG64> cycles; // CPU cycles at the last report, the driver's threads included
+        std::unordered_map<DWORD, uint32_t> totals; // samples inside the image
+        const uintptr_t imageSize = reinterpret_cast<const IMAGE_NT_HEADERS *>(
+            base + reinterpret_cast<const IMAGE_DOS_HEADER *>(base)->e_lfanew)->OptionalHeader.SizeOfImage;
         auto since = std::chrono::steady_clock::now();
         std::vector<std::pair<DWORD, HANDLE>> threads; // refreshed once a second: a snapshot per sample is too slow
         auto listed = std::chrono::steady_clock::time_point{};
@@ -45,7 +52,7 @@ namespace
                     {
                         if (entry.th32OwnerProcessID != GetCurrentProcessId() || entry.th32ThreadID == self)
                             continue;
-                        if (HANDLE thread = OpenThread(THREAD_SUSPEND_RESUME | THREAD_GET_CONTEXT, FALSE, entry.th32ThreadID))
+                        if (HANDLE thread = OpenThread(THREAD_SUSPEND_RESUME | THREAD_GET_CONTEXT | THREAD_QUERY_LIMITED_INFORMATION, FALSE, entry.th32ThreadID))
                             threads.emplace_back(entry.th32ThreadID, thread);
                     }
                     CloseHandle(snapshot);
@@ -60,12 +67,37 @@ namespace
                 CONTEXT context{};
                 context.ContextFlags = CONTEXT_CONTROL;
                 const bool got = GetThreadContext(thread, &context) != 0;
+                // Outside the image (a wait in a system DLL): the first return address into the image on the stack
+                // says who waits; recorded with bit 62 set.
+                std::array<uintptr_t, 4> callers{};
+                size_t found = 0;
+                const uintptr_t rip = static_cast<uintptr_t>(context.Rip);
+                if (got && !(rip >= base && rip - base < imageSize))
+                {
+                    const auto *stack = reinterpret_cast<const uintptr_t *>(context.Rsp);
+                    MEMORY_BASIC_INFORMATION region{};
+                    size_t words = 0;
+                    if (VirtualQuery(stack, &region, sizeof(region)) && region.State == MEM_COMMIT)
+                        words = std::min<size_t>(512, (static_cast<const char *>(region.BaseAddress) + region.RegionSize -
+                                                       reinterpret_cast<const char *>(stack)) / sizeof(uintptr_t));
+                    for (size_t i = 0; i < words && found < callers.size(); ++i)
+                        if (stack[i] > base && stack[i] - base < imageSize)
+                            callers[found++] = stack[i] - base;
+                }
                 ResumeThread(thread);
                 if (got)
                 {
-                    const uintptr_t rip = static_cast<uintptr_t>(context.Rip);
-                    ++samples[id][rip >= base ? rip - base : rip | (uintptr_t{1} << 63)];
-                    ++totals[id];
+                    if (rip >= base && rip - base < imageSize)
+                    {
+                        ++samples[id][rip - base];
+                        ++totals[id];
+                    }
+                    else
+                    {
+                        ++samples[id][found ? callers[0] | (uintptr_t{1} << 62) : rip | (uintptr_t{1} << 63)];
+                        if (found)
+                            ++waits[id][callers];
+                    }
                 }
             }
             const auto now = std::chrono::steady_clock::now();
@@ -73,25 +105,47 @@ namespace
             {
                 if (FILE *file = std::fopen(path.c_str(), "a"))
                 {
-                    std::vector<std::pair<uint32_t, DWORD>> threads;
-                    for (const auto &[id, count] : totals)
-                        threads.emplace_back(count, id);
-                    std::sort(threads.rbegin(), threads.rend());
                     std::fprintf(file, "== 10 s%c", 10);
-                    for (size_t t = 0; t < threads.size() && t < 6u; ++t)
+                    std::vector<std::pair<ULONG64, DWORD>> busy;
+                    for (const auto &[id, thread] : threads)
                     {
-                        const DWORD id = threads[t].second;
+                        ULONG64 now = 0;
+                        if (QueryThreadCycleTime(thread, &now))
+                        {
+                            const auto it = cycles.find(id);
+                            busy.emplace_back(it == cycles.end() ? 0 : now - it->second, id);
+                            cycles[id] = now;
+                        }
+                    }
+                    std::sort(busy.rbegin(), busy.rend());
+                    for (size_t t = 0; t < busy.size() && t < 8u; ++t)
+                        std::fprintf(file, "cpu thread %lu: %.2f Gcycles%c", static_cast<unsigned long>(busy[t].second),
+                                     static_cast<double>(busy[t].first) / 1e9, 10);
+                    for (size_t t = 0; t < busy.size() && t < 6u; ++t)
+                    {
+                        const DWORD id = busy[t].second;
                         std::vector<std::pair<uint32_t, uintptr_t>> hot;
                         for (const auto &[offset, count] : samples[id])
                             hot.emplace_back(count, offset);
                         std::sort(hot.rbegin(), hot.rend());
-                        std::fprintf(file, "thread %lu: %u samples%c", static_cast<unsigned long>(id), threads[t].first, 10);
+                        std::fprintf(file, "thread %lu: %u samples in the image%c", static_cast<unsigned long>(id), totals[id], 10);
                         for (size_t i = 0; i < hot.size() && i < 40u; ++i)
                             std::fprintf(file, "  %llx %u%c", static_cast<unsigned long long>(hot[i].second), hot[i].first, 10);
+                        std::vector<std::pair<uint32_t, std::array<uintptr_t, 4>>> chains;
+                        for (const auto &[chain, count] : waits[id])
+                            chains.emplace_back(count, chain);
+                        std::sort(chains.rbegin(), chains.rend());
+                        for (size_t i = 0; i < chains.size() && i < 8u; ++i)
+                            std::fprintf(file, "  waits %llx>%llx>%llx>%llx %u%c",
+                                         static_cast<unsigned long long>(chains[i].second[0]),
+                                         static_cast<unsigned long long>(chains[i].second[1]),
+                                         static_cast<unsigned long long>(chains[i].second[2]),
+                                         static_cast<unsigned long long>(chains[i].second[3]), chains[i].first, 10);
                     }
                     std::fclose(file);
                 }
                 samples.clear();
+                waits.clear();
                 totals.clear();
                 since = now;
             }

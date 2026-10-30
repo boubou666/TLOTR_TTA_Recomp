@@ -277,6 +277,17 @@ layers. What TTA runs by default now (submodule on `tlotr/native`):
   texture upload that no TTA draw reads since they all take the GL back end's textures (`gsWrites`). Off with
   `setUploadsWanted(false)`: boot 145 battle 28.2 fps (was 25.0), same pictures. `TTA_VU1_THREAD=1` (the adapter on
   the VIF1 thread) is slower there, 25.4, and stays off.
+- **Where the battle frame goes now** (boots 147-153; START at 80 s skips the intro film, the battle is up by
+  ~130 s). The profiler (`TTA_HOST_PROFILE`) now ranks threads by CPU time (`QueryThreadCycleTime`, the driver's
+  thread too) and attributes a sample outside the image to the first return addresses into it on the stack. In
+  battle: the game thread ~0.7 core, the GS thread ~0.7, NVIDIA's driver thread ~0.6. The GS thread swizzles every
+  texture upload into GS memory pixel by pixel (`GSMem::WriteP8` / `WriteCT32`, ~25%) and waits ~40% inside
+  `GSNativeBackend::Present`. `PS2X_GS_NATIVE_STATS=1` (fork 00c1480) shows why: per frame 329 draws but 1715
+  `glTexSubImage2D` of the VRAM texture, 26635 blocks (6.8 MB, 1.6 times GS memory), only 3 state read-backs and
+  0 ms in the fence; the wait is a read-back making the GS thread wait for the driver to get through the uploads.
+  Next: far fewer, larger uploads (whole rows merged, a pixel buffer), then a block-wise swizzle.
+  `native/gs-backend` (19edc88, acd11f5) breaks TTA's battle (darker, 64x64 block garbage) and is slower: not
+  merged (local repro `tlotr/gs-backend-try`).
 
 Boots 55-69 on the way there; boot 69 reaches the title screen with every default and no environment.
 
