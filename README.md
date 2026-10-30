@@ -3,7 +3,7 @@
 # TLOTR_TTA_Recomp
 
 **A native Windows, Linux and macOS port of *The Lord of the Rings: The Third Age* (NTSC-U, `SLUS-21027`), made by statically recompiling the game's PlayStation 2 code to C++.**<br>
-Not an emulator: the game's own code (EE, IOP modules, VU microcode) rebuilt as native code, its graphics drawn by a native OpenGL renderer.
+The game's own code (EE, IOP modules) rebuilt as native code. Its graphics still go through a layer of PS2 emulation (VU1 sandbox, GS state machine, GS memory) drawn with OpenGL; removing it is the work in progress, see below.
 
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-1b8cff)
 ![Compiler](https://img.shields.io/badge/compiler-GCC%20%7C%20Clang-1b8cff)
@@ -39,17 +39,29 @@ Not an emulator: the game's own code (EE, IOP modules, VU microcode) rebuilt as 
 | Linux and macOS builds | ⏳ |
 | Full speed, widescreen, higher resolution | ⏳ |
 
-**Native port** (no PS2 hardware emulation left, the shared goal of the fork's ports):
+**Native port** (no PS2 hardware emulation left, not even a small part: the shared goal of the fork's ports). Native
+means the game's draws built straight from its own data (vertices, matrices, materials), with no GIF packet, no GS
+state machine and no copy of GS memory in between.
 
 | Layer | |
 |---|:---:|
-| Graphics: the GS stream drawn by the native OpenGL renderer (no paraLLEl-GS) | ✅ |
 | IOP modules (sound, streaming, pad, memory card) recompiled to C++, none interpreted | ✅ |
 | Game time, sound and IOP on the PC's clock | ✅ |
-| VU1 off the emulated VU1: every microprogram run by the native port and drawn by the OpenGL renderer (default; `TTA_NATIVE=0` for the VU1 path) | ✅ |
-| The two hottest VU1 programs (the 3D strips, 0x460 and 0x268) translated to C++, no VU at all (`TTA_VU1_PORT=0`: sandbox) | ✅ |
-| VU1 microprograms translated into native draws | 🔧 |
+| No paraLLEl-GS: OpenGL on the GPU | ✅ |
 | Frame loop on the PC's clock in game and menus (`PS2X_FRAME_CAP`, default 60; movies still on the vblank) | 🔧 |
+| The two hottest VU1 programs (the 3D strips, 0x460 and 0x268) translated to C++, no VU interpreter (`TTA_VU1_PORT=0`: sandbox) | 🔧 |
+| Native draws from the game's data, no GIF packet and no GS front end | ⏳ |
+
+Still emulation, to remove:
+
+- **GS front end and `gsWrites`.** Every draw, the C++ ports' included, still carries the PS2 register writes of its
+  packet (TEX0, CLUT loads, ALPHA, TEST, ...) and the GS front end replays them through its state machine; the OpenGL
+  back end takes textures, CLUTs and targets from that GS state.
+- **VU1 sandbox.** Every VU1 program but 0x460 and 0x268 (the characters: 8df1e059 0x10 / 0x190 / 0x1F8, d43b1a88
+  0x620, ...) runs as VU1 microcode in the native adapter's sandbox, with VU memory, flags and XGKICK packets.
+- **CPU copy of GS memory.** Every texture upload is swizzled pixel by pixel into a CPU copy of GS memory and
+  mirrored to a GPU texture (6.8 MB a frame in battle).
+- **VIF1 unpacks, VU0 microcode (0xA80, the mesh math), the movies' vblank pacing.**
 
 ✅ works · 🔧 in progress · ⏳ not reached yet
 
@@ -62,9 +74,10 @@ what remains open.
   <img src="docs/screenshots/2026-10-29-native-vu1-black-riders.png" width="400" alt="Berethor facing three Black Riders in the forest cinematic, drawn without the emulated VU1">
 </p>
 
-**2026-10-29.** The Black Riders' cinematic with native VU1 (now the default): no VU1 program runs on the emulated VU1. The
-native port runs each one itself and hands what it draws to the OpenGL renderer in GS order, with the renderer's own
-textures and targets. The first battle, its scene unlock and the film clip after it match the VU1 path, at the same
+**2026-10-29.** The Black Riders' cinematic with the VU1 sandbox (now the default): no VU1 program runs on the
+emulated VU1 unit, the native adapter runs each one in a sandbox and hands what it draws to the OpenGL renderer in GS
+order, replaying each packet's GS register writes. That is still emulation (VU1 microcode, GS state machine), see
+above. The first battle, its scene unlock and the film clip after it match the VU1 path, at the same
 frame rates (19.5 in battle).
 
 <p align="center">

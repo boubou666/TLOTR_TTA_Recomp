@@ -214,6 +214,25 @@ How the port is brought up, every fix and how it was found, and what remains ope
 The goal, shared with TMB, VP2S and JC2: no PS2 emulation left. Fork `docs/native.md` (on `native/renderer`) has the
 layers. What TTA runs by default now (submodule on `tlotr/native`):
 
+**What still counts as emulation (room rule, 2026-10-30: "no more emulation, even if it is a small thing").** Native
+means draws built straight from the game's own data, with no GIF packet, no GS state machine and no copy of GS memory.
+By that rule several layers below, listed earlier as native, are not:
+
+- **`gsWrites` and the GS front end.** Every draw TTA hands to the GL back end, the C++ ports of 0x460 and 0x268
+  included, carries the register writes of its PS2 packet (TEX0 with its CLUT load, CLAMP, TEX1, ALPHA, TEST, ...),
+  and `GS::submitNativeBatch` replays them through the front end's state machine; the back end takes textures, CLUTs
+  and targets from that GS state.
+- **The VU1 sandbox.** `Vu1StreamAdapter` runs every other program (the characters: 8df1e059 0x10 / 0x190 / 0x1F8,
+  d43b1a88 0x620, ...) as VU1 microcode on its own VU copy, and `GifToNative` parses the XGKICK packets back.
+- **The CPU copy of GS memory.** Every texture upload is swizzled into it pixel by pixel (`GSMem::WriteP8` /
+  `WriteCT32`) and mirrored to the GPU's VRAM texture: 6.8 MB a frame in battle (boot 153).
+- **VIF1 unpacks, the VU0 microprogram 0xA80 (mesh math), the movies' vblank pacing.**
+
+The order of work: the VU1 programs translated to C++ (SC3's `scripts/vu1_port_gen.py` does it ahead of time,
+checked call by call against the sandbox), then draws built from their inputs with materials and textures from the
+game's data, no GIF packet and no GS front end; then the GS memory copy goes with the last user of it. The battle
+performance work of boots 145-153 (uploads, swizzle) speeds up this emulation layer and is secondary to removing it.
+
 - **GS: GSNativeBackend** (OpenGL, VP2S's `native/gs-backend`), chosen by `applyTta` through
   `PS2Runtime::requestNativeGsRenderer` (fork `tlotr/native-gs-request`; `PS2X_GS_RENDERER` still overrides). No
   paraLLEl-GS. It draws the movies, the title screen and its off-screen passes (a 512 x 448 picture composed from
@@ -293,6 +312,8 @@ Boots 55-69 on the way there; boot 69 reaches the title screen with every defaul
 
 ## Open
 
+- Movie sound from the 2nd film on: JC2 found the sceMpeg HLE keeping one more copy of the stream callbacks for every
+  sceMpegAddStrCallback on a handle whose sceMpegDelete is not routed (jc2/native cc18c10). TTA plays several films.
 - The CPU GS rasterizer's magenta movie frames (unsupported texture path).
 - Fork branches not on main yet: `native/vu1-stream`, `tlotr/mpeg-nodata-end`, `tlotr/runner-pch`; the submodule
   is on `tlotr/native` (native/renderer + main + those three).
