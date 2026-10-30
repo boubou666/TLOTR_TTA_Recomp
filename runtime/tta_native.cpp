@@ -304,6 +304,10 @@ namespace tta
         config.screen = screen();
         // TTA draws into its own targets and textures from them: the GL GS renderer draws the sandbox's packets.
         config.gsWrites = true;
+        // TTA_VU1_THREAD=1: the adapter, its sandbox and the C++ programs run on the VIF1 thread beside the EE, as VU1
+        // did (SC3's Config::onVif1Thread); the ports only read VU memory, never EE memory the stream points to.
+        if (const char *thread = std::getenv("TTA_VU1_THREAD"); thread && *thread == '1')
+            config.onVif1Thread = true;
         // The programs TTA draws in C++ (tta_vu1_port.cpp: 0x460 and 0x268 of its 3D image); the others on the sandbox.
         // TTA_VU1_PORT=0 leaves them all on the sandbox.
         const char *port = std::getenv("TTA_VU1_PORT");
